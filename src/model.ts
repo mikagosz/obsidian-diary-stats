@@ -3,6 +3,28 @@
  * No Obsidian API in here, so every rule below is covered by tests.
  */
 
+/**
+ * Gridline values for an axis counting whole things — sessions, tasks, days.
+ * Splitting the maximum into a fixed number of slices puts fractions on the
+ * axis, and two of them can round to the same label: a maximum of three drew
+ * `0, 1, 2, 2, 3`. Instead pick a step of 1, 2, 5 or ten times one of those —
+ * the first that brings the axis down to `most` lines or fewer.
+ */
+export function axisTicks(max: number, most = 4): number[] {
+	const ceiling = Math.max(1, Math.ceil(max));
+	let step = 1;
+	for (let scale = 1; ; scale *= 10) {
+		const fits = [1, 2, 5].map((m) => m * scale).find((candidate) => ceiling / candidate <= most);
+		if (fits) {
+			step = fits;
+			break;
+		}
+	}
+	const ticks: number[] = [];
+	for (let value = 0; value <= Math.ceil(ceiling / step) * step; value += step) ticks.push(value);
+	return ticks;
+}
+
 export type TaskState = "planned" | "inProgress" | "done" | "dropped";
 
 export const TASK_STATES: TaskState[] = ["done", "inProgress", "planned", "dropped"];

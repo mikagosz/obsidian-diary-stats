@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canonical, projectCasing } from "../src/collect";
 import {
+	axisTicks,
 	eachDate,
 	parseGoals,
 	projectTally,
@@ -148,6 +149,35 @@ describe("parseGoals", () => {
 		expect(parseGoals(["- [ ] Cel :: 300 / 150"])).toEqual([
 			{ name: "Cel", plan: 100, actual: 100 },
 		]);
+	});
+});
+
+describe("axisTicks", () => {
+	it("never labels two gridlines with the same number", () => {
+		for (let max = 1; max <= 200; max++) {
+			const ticks = axisTicks(max);
+			expect(new Set(ticks).size).toBe(ticks.length);
+			expect(ticks.every(Number.isInteger)).toBe(true);
+		}
+	});
+
+	it("keeps a small axis whole — the case that drew 0, 1, 2, 2, 3", () => {
+		expect(axisTicks(3)).toEqual([0, 1, 2, 3]);
+		expect(axisTicks(1)).toEqual([0, 1]);
+	});
+
+	it("steps by 1, 2, 5 or a power of ten above them", () => {
+		expect(axisTicks(6)).toEqual([0, 2, 4, 6]);
+		expect(axisTicks(17)).toEqual([0, 5, 10, 15, 20]);
+		expect(axisTicks(300)).toEqual([0, 100, 200, 300]);
+	});
+
+	it("covers the maximum and never more lines than asked for", () => {
+		for (const max of [1, 3, 7, 12, 49, 51, 137, 999]) {
+			const ticks = axisTicks(max);
+			expect(ticks[ticks.length - 1]).toBeGreaterThanOrEqual(max);
+			expect(ticks.length - 1).toBeLessThanOrEqual(4);
+		}
 	});
 });
 

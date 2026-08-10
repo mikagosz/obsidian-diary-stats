@@ -4,6 +4,8 @@
  * palette flipped — and the theme switch costs nothing at runtime.
  */
 
+import { axisTicks } from "./model";
+
 const NS = "http://www.w3.org/2000/svg";
 
 export interface Slice {
@@ -165,17 +167,20 @@ export function lineChart(host: HTMLElement, points: Point[], unit: string): voi
 	const h = 240;
 	const pad = { top: 16, right: 16, bottom: 34, left: 34 };
 	const max = Math.max(1, ...points.map((p) => p.value));
+	const ticks = axisTicks(max);
+	// The axis rounds the maximum up to a whole step, so the topmost point sits
+	// under the top gridline rather than on the very edge of the box.
+	const top = ticks[ticks.length - 1] ?? max;
 	const root = svg(wrap, "svg", { viewBox: `0 0 ${w} ${h}`, class: "ds-line-svg" });
 
 	const x = (i: number) =>
 		points.length === 1
 			? (pad.left + w - pad.right) / 2
 			: pad.left + (i * (w - pad.left - pad.right)) / (points.length - 1);
-	const y = (v: number) => h - pad.bottom - (v / max) * (h - pad.top - pad.bottom);
+	const y = (v: number) => h - pad.bottom - (v / top) * (h - pad.top - pad.bottom);
 
-	// Recessive grid: four lines, no box, no vertical rules.
-	for (let step = 0; step <= 4; step++) {
-		const value = (max / 4) * step;
+	// Recessive grid: no box, no vertical rules, one line per whole-number tick.
+	for (const value of ticks) {
 		svg(root, "line", {
 			x1: pad.left,
 			x2: w - pad.right,
