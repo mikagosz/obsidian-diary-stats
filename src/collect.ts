@@ -6,6 +6,7 @@
 
 import type { App, TFile } from "obsidian";
 import {
+	asText,
 	type Day,
 	emptyTasks,
 	type Goal,
@@ -83,14 +84,17 @@ function projectsOfSession(
 	const fm = app.metadataCache.getFileCache(file)?.frontmatter;
 	if (!fm) return [];
 
-	const covers = fm.dotyczy;
+	// Frontmatter is whatever the user typed, so it enters as `unknown` and every
+	// step below has to earn its type.
+	const covers: unknown = fm.dotyczy;
 	if (Array.isArray(covers) && covers.length > 0) {
-		return covers.map((entry) => canonical(String(entry), casing)).filter(Boolean);
+		return covers.map((entry: unknown) => canonical(asText(entry), casing)).filter(Boolean);
 	}
 
-	const tags = Array.isArray(fm.tags) ? fm.tags : [];
+	const raw: unknown = fm.tags;
+	const tags: unknown[] = Array.isArray(raw) ? raw : [];
 	return tags
-		.map((tag) => String(tag))
+		.map((tag) => asText(tag))
 		.filter((tag) => tag.startsWith("projekt/"))
 		.map((tag) => canonical(tag.slice("projekt/".length), casing))
 		.filter(Boolean);

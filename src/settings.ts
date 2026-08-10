@@ -44,7 +44,7 @@ export class DiaryStatsSettingTab extends PluginSettingTab {
 
 		new Setting(this.containerEl)
 			.setName("Diary folder")
-			.setDesc("Folder holding the day notes. Their filenames must start with YYYY-MM-DD.")
+			.setDesc("Folder holding the day notes. Their filenames must start with a date, as in 2026-08-09.")
 			.addText((text) =>
 				text.setValue(this.plugin.settings.diaryFolder).onChange(async (value) => {
 					this.plugin.settings.diaryFolder = value.trim() || DEFAULT_SETTINGS.diaryFolder;
@@ -81,7 +81,7 @@ export class DiaryStatsSettingTab extends PluginSettingTab {
 			)
 			.addTextArea((text) => {
 				text.inputEl.rows = 6;
-				text.setPlaceholder("Foo Bar\nBazQux").setValue(this.plugin.settings.projectNames);
+				text.setValue(this.plugin.settings.projectNames);
 				text.onChange(async (value) => {
 					this.plugin.settings.projectNames = value;
 					await this.plugin.saveSettings();
@@ -95,7 +95,6 @@ export class DiaryStatsSettingTab extends PluginSettingTab {
 				slider
 					.setLimits(3, 8, 1)
 					.setValue(this.plugin.settings.maxProjects)
-					.setDynamicTooltip()
 					.onChange(async (value) => {
 						this.plugin.settings.maxProjects = value;
 						await this.plugin.saveSettings();

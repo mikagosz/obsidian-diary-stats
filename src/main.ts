@@ -67,7 +67,9 @@ export default class DiaryStatsPlugin extends Plugin {
 	}
 
 	async loadSettings(): Promise<void> {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		// `loadData()` is whatever sits in data.json — an older shape, or nothing.
+		const stored = (await this.loadData()) as Partial<DiaryStatsSettings> | null;
+		this.settings = { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
 	}
 
 	async saveSettings(): Promise<void> {
@@ -225,7 +227,7 @@ export default class DiaryStatsPlugin extends Plugin {
 			targets.push({ target: yearNote(year), label: String(year) });
 		} else if (kind === "month") {
 			targets.push({ target: yearNote(year), label: String(year) });
-			for (const [i, _week] of weeksOfMonth(year, month).entries()) {
+			for (const i of weeksOfMonth(year, month).keys()) {
 				targets.push({ target: weekNote(year, month, i + 1), label: `Tydzień ${i + 1}` });
 			}
 		} else {

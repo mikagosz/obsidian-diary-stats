@@ -4,6 +4,20 @@
  */
 
 /**
+ * Frontmatter values as text, without `String()` on an unknown.
+ *
+ * A YAML value can be a map or a list, and `String({})` yields `[object Object]`
+ * — which then sails through a regex test as an ordinary non-match, so a broken
+ * `miesiac:` looks exactly like an absent one. Anything that is not a scalar is
+ * treated as absent instead.
+ */
+export function asText(value: unknown): string {
+	if (typeof value === "string") return value;
+	if (typeof value === "number" || typeof value === "boolean") return String(value);
+	return "";
+}
+
+/**
  * Gridline values for an axis counting whole things — sessions, tasks, days.
  * Splitting the maximum into a fixed number of slices puts fractions on the
  * axis, and two of them can round to the same label: a maximum of three drew
@@ -122,14 +136,14 @@ export function rangeFromFrontmatter(fm: Record<string, unknown> | undefined): R
 	const to = isoOf(fm.do);
 	if (from && to) return { from, to };
 
-	const month = String(fm.miesiac ?? "").slice(0, 7);
+	const month = asText(fm.miesiac).slice(0, 7);
 	if (/^\d{4}-\d{2}$/.test(month)) {
 		const y = Number(month.slice(0, 4));
 		const m = Number(month.slice(5, 7));
 		return { from: iso(y, m, 1), to: iso(y, m, daysInMonth(y, m)) };
 	}
 
-	const year = String(fm.rok ?? "").slice(0, 4);
+	const year = asText(fm.rok).slice(0, 4);
 	if (/^\d{4}$/.test(year)) return { from: `${year}-01-01`, to: `${year}-12-31` };
 
 	return null;
@@ -138,7 +152,7 @@ export function rangeFromFrontmatter(fm: Record<string, unknown> | undefined): R
 /** Frontmatter dates arrive as strings or as Date objects, depending on the value's shape. */
 function isoOf(value: unknown): string | null {
 	if (value instanceof Date) return value.toISOString().slice(0, 10);
-	const text = String(value ?? "").slice(0, 10);
+	const text = asText(value).slice(0, 10);
 	return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
 }
 

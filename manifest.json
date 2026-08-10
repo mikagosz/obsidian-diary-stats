@@ -1,7 +1,7 @@
 {
 	"id": "diary-stats",
 	"name": "Diary Stats",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"minAppVersion": "1.12.7",
 	"description": "Charts for periodic notes: how sessions were spread over time, which projects took the period, task states, and goal progress. Reads the notes you already write.",
 	"author": "mikagosz",

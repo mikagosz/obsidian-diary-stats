@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-diary-stats",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Charts for Obsidian periodic notes: activity over time, projects, task states, goals.",
 	"main": "main.js",
 	"type": "module",

@@ -40,19 +40,20 @@ function tooltip(host: HTMLElement): {
 	show: (x: number, y: number, title: string, body: string) => void;
 	hide: () => void;
 } {
+	// Visibility is a class, position goes through custom properties: the only
+	// genuinely dynamic values here are the two coordinates, and everything a
+	// theme might want to restyle stays in `styles.css`.
 	const box = host.createDiv({ cls: "ds-tip" });
-	box.style.display = "none";
 	return {
 		show(x, y, title, body) {
 			box.empty();
 			box.createDiv({ cls: "ds-tip-title", text: title });
 			box.createDiv({ cls: "ds-tip-body", text: body });
-			box.style.display = "block";
-			box.style.left = `${x}px`;
-			box.style.top = `${y}px`;
+			box.setCssProps({ "--ds-tip-x": `${x}px`, "--ds-tip-y": `${y}px` });
+			box.addClass("is-shown");
 		},
 		hide() {
-			box.style.display = "none";
+			box.removeClass("is-shown");
 		},
 	};
 }
@@ -111,10 +112,9 @@ export function donut(host: HTMLElement, slices: Slice[], centre: string, captio
 		});
 		arc.addEventListener("mousemove", (event) => {
 			const box = wrap.getBoundingClientRect();
-			const e = event as MouseEvent;
 			tip.show(
-				e.clientX - box.left,
-				e.clientY - box.top,
+				event.clientX - box.left,
+				event.clientY - box.top,
 				slice.label,
 				slice.detail
 					? `${slice.value} · ${percent(slice.value, whole)} — ${slice.detail}`
@@ -234,9 +234,8 @@ export function lineChart(host: HTMLElement, points: Point[], unit: string): voi
 		fill: "transparent",
 	});
 	hit.addEventListener("mousemove", (event) => {
-		const e = event as MouseEvent;
 		const box = root.getBoundingClientRect();
-		const local = ((e.clientX - box.left) / box.width) * w;
+		const local = ((event.clientX - box.left) / box.width) * w;
 		let nearest = 0;
 		for (let i = 1; i < points.length; i++) {
 			if (Math.abs(x(i) - local) < Math.abs(x(nearest) - local)) nearest = i;
@@ -251,8 +250,8 @@ export function lineChart(host: HTMLElement, points: Point[], unit: string): voi
 		halo.setAttribute("opacity", "1");
 		const hostBox = wrap.getBoundingClientRect();
 		tip.show(
-			e.clientX - hostBox.left,
-			e.clientY - hostBox.top,
+			event.clientX - hostBox.left,
+			event.clientY - hostBox.top,
 			p.label,
 			p.note ? `${p.value} ${unit} · ${p.note}` : `${p.value} ${unit}`,
 		);

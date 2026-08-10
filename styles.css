@@ -425,7 +425,11 @@
 /* ── tooltip ───────────────────────────────────────────────────────── */
 
 .ds-tip {
+	display: none;
 	position: absolute;
+	/* The hovered mark's position; the chart sets these two, nothing else. */
+	left: var(--ds-tip-x, 0);
+	top: var(--ds-tip-y, 0);
 	z-index: 20;
 	pointer-events: none;
 	transform: translate(-50%, calc(-100% - 12px));
@@ -438,11 +442,12 @@
 	max-width: 22rem;
 }
 
-.ds-tip-title {
-	white-space: nowrap;
+.ds-tip.is-shown {
+	display: block;
 }
 
 .ds-tip-title {
+	white-space: nowrap;
 	color: var(--ds-ink);
 	font-weight: 600;
 }

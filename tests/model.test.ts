@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canonical, projectCasing } from "../src/collect";
 import {
+	asText,
 	axisTicks,
 	eachDate,
 	parseGoals,
@@ -58,7 +59,26 @@ describe("weeksOfMonth", () => {
 	});
 });
 
+describe("asText", () => {
+	it("passes scalars through", () => {
+		expect(asText("2026-08")).toBe("2026-08");
+		expect(asText(2026)).toBe("2026");
+	});
+
+	it("treats a map or a list as absent, instead of stringifying it", () => {
+		expect(asText({ a: 1 })).toBe("");
+		expect(asText(["2026-08"])).toBe("");
+		expect(asText(null)).toBe("");
+		expect(asText(undefined)).toBe("");
+	});
+});
+
 describe("rangeFromFrontmatter", () => {
+	it("ignores a period field that came in as a map or a list", () => {
+		expect(rangeFromFrontmatter({ miesiac: { rok: 2026 } })).toBeNull();
+		expect(rangeFromFrontmatter({ rok: ["2026"] })).toBeNull();
+	});
+
 	it("reads a weekly note", () => {
 		expect(rangeFromFrontmatter({ od: "2026-08-01", do: "2026-08-07" })).toEqual({
 			from: "2026-08-01",
