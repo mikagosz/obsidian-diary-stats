@@ -1,0 +1,40 @@
+{
+	"name": "obsidian-diary-stats",
+	"version": "0.1.0",
+	"description": "Charts for Obsidian periodic notes: activity over time, projects, task states, goals.",
+	"main": "main.js",
+	"type": "module",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"check": "vitest run",
+		"build": "tsc -noEmit -skipLibCheck && npm run check && node esbuild.config.mjs production",
+		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"lint": "biome check .",
+		"format": "biome check --write .",
+		"lint:obsidian": "eslint ."
+	},
+	"keywords": [
+		"obsidian",
+		"obsidian-plugin",
+		"charts",
+		"periodic-notes",
+		"statistics"
+	],
+	"author": "mikagosz",
+	"license": "MIT",
+	"engines": {
+		"node": ">=20"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.7",
+		"@types/node": "^22.15.17",
+		"esbuild": "^0.28.2",
+		"eslint": "^9.39.4",
+		"eslint-plugin-obsidianmd": "^0.4.0",
+		"globals": "^17.6.0",
+		"jiti": "^2.6.1",
+		"obsidian": "^1.13.1",
+		"typescript": "^5.8.3",
+		"vitest": "^4.1.10"
+	}
+}

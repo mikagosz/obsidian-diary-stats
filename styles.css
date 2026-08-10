@@ -1,0 +1,602 @@
+/* Diary Stats — two selected palettes, not one flipped.
+   Categorical slots and their dark steps come from a validated palette;
+   ordering matters, so never reshuffle these without re-running the check. */
+
+.ds-root {
+	--ds-tone-1: #2a78d6;
+	--ds-tone-2: #eb6834;
+	--ds-tone-3: #1baf7a;
+	--ds-tone-4: #eda100;
+	--ds-tone-5: #e87ba4;
+	--ds-tone-6: #008300;
+	--ds-tone-7: #4a3aa7;
+	--ds-tone-8: #e34948;
+
+	--ds-tone-done: #1baf7a;
+	--ds-tone-progress: #eda100;
+	--ds-tone-planned: #2a78d6;
+	--ds-tone-dropped: #b6b6b0;
+
+	/* Nagłówek panelu — pokrętła do zabawy. Nadpisz je w swoim snippecie CSS
+	   (`.ds-root { --ds-title-size: 1rem; }`) zamiast ruszać kod pluginu. */
+	--ds-title-size: 0.82rem;
+	--ds-title-weight: 600;
+	--ds-title-spacing: 0.07em;
+	--ds-title-transform: uppercase;
+	--ds-title-color: var(--text-normal);
+	--ds-caption-size: 0.78rem;
+	--ds-caption-color: var(--text-muted);
+
+	--ds-surface: var(--background-primary);
+	--ds-track: var(--background-modifier-border);
+	--ds-ink: var(--text-normal);
+	--ds-ink-soft: var(--text-muted);
+	--ds-grid: var(--background-modifier-border);
+
+	display: flex;
+	flex-direction: column;
+	gap: 1.4rem;
+	margin: 0.6rem 0 1rem;
+}
+
+.theme-dark .ds-root {
+	--ds-tone-1: #3987e5;
+	--ds-tone-2: #d95926;
+	--ds-tone-3: #199e70;
+	--ds-tone-4: #c98500;
+	--ds-tone-5: #d55181;
+	--ds-tone-6: #008300;
+	--ds-tone-7: #9085e9;
+	--ds-tone-8: #e66767;
+
+	--ds-tone-done: #199e70;
+	--ds-tone-progress: #c98500;
+	--ds-tone-planned: #3987e5;
+	--ds-tone-dropped: #6d6d68;
+}
+
+/* ── panel ─────────────────────────────────────────────────────────── */
+
+.ds-panel {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 10px;
+	padding: 0.9rem 1.1rem 1.1rem;
+	background: var(--background-primary);
+}
+
+.ds-panel-head {
+	display: flex;
+	align-items: baseline;
+	gap: 0.6rem;
+	flex-wrap: wrap;
+	margin-bottom: 0.9rem;
+}
+
+.ds-root .ds-panel-head h4.ds-panel-title {
+	margin: 0;
+	line-height: 1.3;
+	font-size: var(--ds-title-size);
+	font-weight: var(--ds-title-weight);
+	letter-spacing: var(--ds-title-spacing);
+	text-transform: var(--ds-title-transform);
+	color: var(--ds-title-color);
+}
+
+.ds-root .ds-panel-caption {
+	font-size: var(--ds-caption-size);
+	color: var(--ds-caption-color);
+}
+
+.ds-panel-body {
+	position: relative;
+}
+
+.ds-empty,
+.ds-error {
+	font-size: 0.85rem;
+	color: var(--ds-ink-soft);
+	font-style: italic;
+}
+
+.ds-error {
+	color: var(--text-error);
+	font-style: normal;
+}
+
+/* ── donut ─────────────────────────────────────────────────────────── */
+
+.ds-donut {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 1.6rem;
+	flex-wrap: wrap;
+}
+
+.ds-donut-svg {
+	width: 190px;
+	height: 190px;
+	flex: 0 0 auto;
+}
+
+.ds-arc {
+	transition: opacity 120ms ease;
+	cursor: default;
+}
+
+.ds-donut:hover .ds-arc {
+	opacity: 0.45;
+}
+
+.ds-donut .ds-arc:hover {
+	opacity: 1;
+}
+
+.ds-donut-centre {
+	fill: var(--ds-ink);
+	font-size: 30px;
+	font-weight: 600;
+}
+
+.ds-donut-caption {
+	fill: var(--ds-ink-soft);
+	font-size: 12px;
+}
+
+.ds-legend {
+	display: flex;
+	flex-direction: column;
+	gap: 0.42rem;
+	min-width: 220px;
+	flex: 1 1 220px;
+}
+
+.ds-legend-row {
+	display: flex;
+	align-items: center;
+	gap: 0.55rem;
+	font-size: 0.86rem;
+}
+
+.ds-swatch {
+	flex: 0 0 auto;
+}
+
+.ds-legend-label {
+	color: var(--ds-ink);
+	flex: 1 1 auto;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ds-legend-value {
+	color: var(--ds-ink);
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+}
+
+.ds-legend-pct {
+	color: var(--ds-ink-soft);
+	font-variant-numeric: tabular-nums;
+	min-width: 3ch;
+	text-align: right;
+}
+
+/* ── line chart ────────────────────────────────────────────────────── */
+
+.ds-line {
+	position: relative;
+}
+
+.ds-line-svg {
+	width: 100%;
+	height: auto;
+}
+
+.ds-grid {
+	stroke: var(--ds-grid);
+	stroke-width: 1;
+	opacity: 0.55;
+}
+
+.ds-axis {
+	fill: var(--ds-ink-soft);
+	font-size: 11px;
+}
+
+.ds-area {
+	fill: var(--ds-tone-7);
+	opacity: 0.12;
+}
+
+.ds-stroke {
+	fill: none;
+	stroke: var(--ds-tone-7);
+	stroke-width: 2;
+	stroke-linejoin: round;
+	stroke-linecap: round;
+}
+
+.ds-dot {
+	fill: var(--ds-tone-7);
+	stroke: var(--ds-surface);
+	stroke-width: 2;
+}
+
+.ds-dot-active {
+	fill: none;
+	stroke: var(--ds-tone-7);
+	stroke-width: 2;
+}
+
+.ds-cross {
+	stroke: var(--ds-ink-soft);
+	stroke-width: 1;
+	stroke-dasharray: 3 3;
+}
+
+/* ── bar rows ──────────────────────────────────────────────────────── */
+
+.ds-bars,
+.ds-goals,
+.ds-metrics {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.ds-bar-row {
+	display: flex;
+	align-items: center;
+	gap: 0.7rem;
+	font-size: 0.86rem;
+}
+
+.ds-bar-label {
+	flex: 0 0 8.5rem;
+	color: var(--ds-ink);
+}
+
+.ds-bar-track {
+	flex: 1 1 auto;
+	height: 12px;
+	border-radius: 4px;
+	background: var(--ds-track);
+	overflow: hidden;
+}
+
+.ds-bar-fill {
+	height: 100%;
+	border-radius: 4px;
+	background: var(--ds-tone-7);
+	min-width: 2px;
+}
+
+.ds-bar-value {
+	flex: 0 0 5rem;
+	text-align: right;
+	color: var(--ds-ink-soft);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ── goals ─────────────────────────────────────────────────────────── */
+
+.ds-goal-row {
+	display: flex;
+	align-items: center;
+	gap: 0.7rem;
+	font-size: 0.86rem;
+}
+
+.ds-goal-name {
+	flex: 0 0 13rem;
+	color: var(--ds-ink);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ds-goal-plan,
+.ds-goal-actual-value {
+	flex: 0 0 3rem;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.ds-goal-plan {
+	color: var(--ds-ink-soft);
+}
+
+.ds-goal-actual-value {
+	color: var(--ds-ink);
+	font-weight: 600;
+}
+
+.ds-goal-track {
+	position: relative;
+	flex: 1 1 auto;
+	height: 12px;
+	border-radius: 4px;
+	background: var(--ds-track);
+}
+
+.ds-goal-planned {
+	position: absolute;
+	inset: 0 auto 0 0;
+	border-radius: 4px;
+	background: var(--ds-tone-7);
+	opacity: 0.28;
+}
+
+.ds-goal-actual {
+	position: absolute;
+	inset: 0 auto 0 0;
+	border-radius: 4px;
+	background: var(--ds-tone-7);
+	min-width: 2px;
+}
+
+.ds-goal-status {
+	flex: 0 0 7.5rem;
+	font-size: 0.8rem;
+}
+
+.ds-goal-status.is-reached {
+	color: var(--ds-tone-done);
+}
+
+.ds-goal-status.is-behind {
+	color: var(--ds-tone-progress);
+}
+
+/* ── metrics ───────────────────────────────────────────────────────── */
+
+.ds-metric-row {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+	font-size: 0.86rem;
+}
+
+.ds-metric-name {
+	flex: 1 1 7rem;
+	min-width: 0;
+	color: var(--ds-ink);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ds-metric-value {
+	flex: 0 0 3.2rem;
+	text-align: right;
+	color: var(--ds-ink);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+/* The sparkline is the one thing here that may shrink — the number and the
+   trend chip must stay readable at any pane width. */
+.ds-metric-spark {
+	flex: 1 1 3rem;
+	min-width: 0;
+	display: flex;
+	justify-content: flex-start;
+}
+
+.ds-spark {
+	width: 100%;
+	max-width: 120px;
+	height: 28px;
+}
+
+.ds-spark-line {
+	fill: none;
+	stroke: var(--ds-tone-7);
+	stroke-width: 2;
+	stroke-linejoin: round;
+	stroke-linecap: round;
+}
+
+.ds-spark-end {
+	fill: var(--ds-tone-7);
+}
+
+.ds-spark-empty {
+	color: var(--ds-ink-soft);
+}
+
+.ds-metric-trend {
+	flex: 0 0 4rem;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	color: var(--ds-ink-soft);
+}
+
+.ds-metric-trend.is-up {
+	color: var(--ds-tone-done);
+}
+
+.ds-metric-trend.is-down {
+	color: var(--ds-tone-8);
+}
+
+/* ── tooltip ───────────────────────────────────────────────────────── */
+
+.ds-tip {
+	position: absolute;
+	z-index: 20;
+	pointer-events: none;
+	transform: translate(-50%, calc(-100% - 12px));
+	padding: 0.35rem 0.6rem;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+	font-size: 0.8rem;
+	max-width: 22rem;
+}
+
+.ds-tip-title {
+	white-space: nowrap;
+}
+
+.ds-tip-title {
+	color: var(--ds-ink);
+	font-weight: 600;
+}
+
+.ds-tip-body {
+	color: var(--ds-ink-soft);
+}
+
+/* Narrow panes: stack the donut over its legend rather than squeezing both. */
+@media (max-width: 620px) {
+	.ds-donut {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.ds-bar-label,
+	.ds-goal-name,
+	.ds-metric-name {
+		flex-basis: 7rem;
+	}
+
+	.ds-goal-status {
+		display: none;
+	}
+}
+
+/* ── links back to the sources ─────────────────────────────────────── */
+
+.ds-links {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.ds-link-group {
+	min-width: 0;
+}
+
+.ds-link-group-title {
+	font-size: 0.74rem;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ds-ink-soft);
+	margin-bottom: 0.45rem;
+}
+
+/* Links flow inline and wrap. Stacked one per row, a month of sessions is a
+   screen and a half of scrolling for a panel that is meant to be a glance. */
+.ds-link-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.3rem 0.75rem;
+}
+
+.ds-link {
+	font-size: 0.82rem;
+	line-height: 1.5;
+	max-width: 22rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* A link whose note does not exist yet wears Obsidian's own unresolved colour,
+   so a missing session log is visible instead of silently looking fine. */
+.ds-link.is-unresolved {
+	color: var(--text-accent);
+	opacity: 0.55;
+}
+
+/* ── header ────────────────────────────────────────────────────────── */
+
+/* Nagłówek nie jest kafelkiem — ma być tytułem strony, tak jak na makiecie.
+   Ramkę nosi tylko pudełko z faktami obok. */
+.ds-panel-header {
+	border: none;
+	background: transparent;
+	padding: 0;
+}
+
+.ds-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1.5rem;
+	flex-wrap: wrap;
+	padding-bottom: 0.2rem;
+}
+
+.ds-header-name {
+	min-width: 0;
+}
+
+.ds-kicker {
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--ds-ink-soft);
+	margin-bottom: 0.35rem;
+}
+
+.ds-title {
+	font-size: 2.6rem;
+	font-weight: 700;
+	line-height: 1.05;
+	letter-spacing: -0.02em;
+	color: var(--ds-ink);
+}
+
+/* Facts sit in their own surface so the title has something to sit against —
+   the same trick the mockup uses to stop the header floating in white space. */
+.ds-facts {
+	flex: 0 1 auto;
+	min-width: 15rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+	padding: 0.7rem 0.9rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-secondary);
+}
+
+.ds-fact {
+	display: flex;
+	justify-content: space-between;
+	gap: 1.2rem;
+	font-size: 0.82rem;
+}
+
+.ds-fact-label {
+	color: var(--ds-ink-soft);
+}
+
+.ds-fact-value {
+	color: var(--ds-ink);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 620px) {
+	.ds-title {
+		font-size: 2rem;
+	}
+
+	.ds-facts {
+		min-width: 100%;
+	}
+}
+
+/* Panel bez własnej ramki — używany, gdy nagłówek nosi sama notatka. */
+.ds-panel-bare {
+	border: none;
+	background: transparent;
+	padding: 0;
+}
