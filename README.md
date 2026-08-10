@@ -7,6 +7,14 @@ you already write, with nothing extra to fill in.
 ```diary-stats
 ```
 
+| Light | Dark |
+|---|---|
+| ![A monthly note in the light theme](docs/overview-light.png) | ![The same note in the dark theme](docs/overview-dark.png) |
+
+Light and dark are two selected palettes, not one flipped — see [Colours](#colours).
+
+![Activity, the four weeks of the month, and task states](docs/charts-light.png)
+
 ## What it draws
 
 | Panel | Reads |
@@ -88,6 +96,18 @@ Light and dark are two selected palettes, not one flipped. Both were checked for
 colour-vision separation and contrast against the surface they render on. If you
 reorder the slots in `styles.css`, re-run that check — adjacency is what the
 validation was done against.
+
+## Installation
+
+Not in the community plugin catalogue, so install it by hand:
+
+1. Take `main.js`, `manifest.json` and `styles.css` from a release (or build them —
+   `npm install && npm run build`).
+2. Put the three files in `<vault>/.obsidian/plugins/diary-stats/`.
+3. Reload Obsidian and enable **Diary Stats** under Settings → Community plugins.
+
+Needs Obsidian 1.12.7 or newer. Runs on desktop and mobile — nothing here touches
+the file system directly.
 
 ## Licence
 
