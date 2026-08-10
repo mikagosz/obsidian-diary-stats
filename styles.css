@@ -268,6 +268,8 @@
 
 .ds-bar-fill {
 	height: 100%;
+	/* Set per row by the chart; the look of the bar stays here. */
+	width: var(--ds-bar-w, 0);
 	border-radius: 4px;
 	background: var(--ds-tone-7);
 	min-width: 2px;
@@ -324,6 +326,8 @@
 .ds-goal-planned {
 	position: absolute;
 	inset: 0 auto 0 0;
+	/* Set per row by the chart; everything else about the bar lives here. */
+	width: var(--ds-goal-w, 0);
 	border-radius: 4px;
 	background: var(--ds-tone-7);
 	opacity: 0.28;
@@ -332,6 +336,7 @@
 .ds-goal-actual {
 	position: absolute;
 	inset: 0 auto 0 0;
+	width: var(--ds-goal-w, 0);
 	border-radius: 4px;
 	background: var(--ds-tone-7);
 	min-width: 2px;

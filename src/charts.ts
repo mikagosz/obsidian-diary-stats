@@ -4,7 +4,7 @@
  * palette flipped — and the theme switch costs nothing at runtime.
  */
 
-import { axisTicks } from "./model";
+import { axisTicks, type Goal } from "./model";
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -275,28 +275,29 @@ export function barRows(host: HTMLElement, points: Point[], unit: string): void 
 		const row = table.createDiv({ cls: "ds-bar-row" });
 		row.createSpan({ cls: "ds-bar-label", text: p.label });
 		const track = row.createDiv({ cls: "ds-bar-track" });
-		const fill = track.createDiv({ cls: "ds-bar-fill" });
-		fill.style.width = `${(p.value / max) * 100}%`;
+		track
+			.createDiv({ cls: "ds-bar-fill" })
+			.setCssProps({ "--ds-bar-w": `${(p.value / max) * 100}%` });
 		row.createSpan({ cls: "ds-bar-value", text: `${p.value} ${unit}` });
 		if (p.note) row.setAttribute("title", p.note);
 	}
 }
 
 /** Plan against actual, one row per goal. Actual overlays the planned track. */
-export function goalBars(
-	host: HTMLElement,
-	goals: { name: string; plan: number; actual: number }[],
-): void {
+export function goalBars(host: HTMLElement, goals: Goal[]): void {
 	const table = host.createDiv({ cls: "ds-goals" });
 	for (const goal of goals) {
 		const row = table.createDiv({ cls: "ds-goal-row" });
 		row.createSpan({ cls: "ds-goal-name", text: goal.name });
-		row.createSpan({ cls: "ds-goal-plan", text: `${goal.plan}%` });
+		// A goal counted from checkboxes shows the tally: "3 / 5" is actionable in a
+		// way that "100%" planned is not.
+		row.createSpan({
+			cls: "ds-goal-plan",
+			text: goal.tasks ? `${goal.tasks.done} / ${goal.tasks.total}` : `${goal.plan}%`,
+		});
 		const track = row.createDiv({ cls: "ds-goal-track" });
-		const planned = track.createDiv({ cls: "ds-goal-planned" });
-		planned.style.width = `${goal.plan}%`;
-		const actual = track.createDiv({ cls: "ds-goal-actual" });
-		actual.style.width = `${goal.actual}%`;
+		track.createDiv({ cls: "ds-goal-planned" }).setCssProps({ "--ds-goal-w": `${goal.plan}%` });
+		track.createDiv({ cls: "ds-goal-actual" }).setCssProps({ "--ds-goal-w": `${goal.actual}%` });
 		row.createSpan({ cls: "ds-goal-actual-value", text: `${goal.actual}%` });
 		const reached = goal.actual >= goal.plan;
 		row.createSpan({

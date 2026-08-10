@@ -65,6 +65,12 @@ export interface Goal {
 	plan: number;
 	/** Percent actually reached. */
 	actual: number;
+	/**
+	 * Set when the goal counts checkboxes instead of a hand-written percent.
+	 * The panel shows `done / total` rather than a plan figure, because that is
+	 * the number the reader can act on.
+	 */
+	tasks?: { done: number; total: number };
 }
 
 /**
@@ -226,19 +232,82 @@ export function tallyTasks(days: Day[]): Record<TaskState, number> {
  * First number is the plan, second the actual. A line without `::` is treated as
  * prose and skipped, so the user can keep notes in the same section.
  */
+const ITEM = /^(\s*)[-*+]\s+(?:\[(.)\]\s+)?(.*)$/;
+const MANUAL = /^(.*?)\s*::\s*(\d{1,3})\s*%?\s*(?:\/\s*(\d{1,3})\s*%?)?\s*$/;
+
+interface Item {
+	indent: number;
+	marker: string | undefined;
+	text: string;
+}
+
+/**
+ * Goals are optional and hand-written. Three shapes are accepted, and one
+ * section can mix them:
+ *
+ *     - Nazwa celu :: 80 / 85      ← percent typed by hand: plan, then actual
+ *     - [x] Nazwa celu             ← a checkbox: done or not
+ *     - [ ] Nazwa celu             ← with sub-tasks below, progress is their tally
+ *         - [x] krok pierwszy
+ *         - [ ] krok drugi
+ *
+ * The checkbox forms exist so the number nobody wants to maintain by hand — the
+ * percentage — is counted instead. A dropped sub-task (`[-]`) leaves the tally
+ * entirely: it is no longer part of the plan, so counting it as outstanding
+ * would make a finished goal look unfinished forever.
+ *
+ * A line without `::` and without a checkbox is prose and is skipped, so notes
+ * can live in the same section.
+ */
 export function parseGoals(lines: string[]): Goal[] {
-	const goals: Goal[] = [];
+	const items: Item[] = [];
 	for (const raw of lines) {
-		const match = raw.match(/^(.*?)\s*::\s*(\d{1,3})\s*%?\s*(?:\/\s*(\d{1,3})\s*%?)?\s*$/);
-		if (!match) continue;
-		const name = (match[1] ?? "").replace(/^[-*+]\s*/, "").replace(/^\[.\]\s*/, "").trim();
-		if (!name) continue;
+		const m = raw.match(ITEM);
+		if (m) items.push({ indent: m[1]?.length ?? 0, marker: m[2], text: (m[3] ?? "").trim() });
+	}
+	if (items.length === 0) return [];
+
+	const base = Math.min(...items.map((i) => i.indent));
+	const goals: Goal[] = [];
+
+	for (const [index, item] of items.entries()) {
+		if (item.indent !== base) continue;
+
+		const manual = item.text.match(MANUAL);
+		if (manual) {
+			const name = (manual[1] ?? "").trim();
+			if (!name) continue;
+			goals.push({
+				name,
+				plan: clampPercent(Number(manual[2] ?? 0)),
+				actual: clampPercent(Number(manual[3] ?? 0)),
+			});
+			continue;
+		}
+
+		if (item.marker === undefined || !item.text) continue;
+
+		const children: Item[] = [];
+		for (let i = index + 1; i < items.length; i++) {
+			const next = items[i];
+			if (!next || next.indent <= base) break;
+			if (next.marker !== undefined) children.push(next);
+		}
+
+		const counted = (children.length > 0 ? children : [item]).filter(
+			(t) => taskState(t.marker) !== "dropped",
+		);
+		if (counted.length === 0) continue;
+		const done = counted.filter((t) => taskState(t.marker) === "done").length;
+
 		goals.push({
-			name,
-			plan: clampPercent(Number(match[2] ?? 0)),
-			actual: clampPercent(Number(match[3] ?? 0)),
+			name: item.text,
+			plan: 100,
+			actual: clampPercent(Math.round((done / counted.length) * 100)),
+			tasks: { done, total: counted.length },
 		});
 	}
+
 	return goals;
 }
 

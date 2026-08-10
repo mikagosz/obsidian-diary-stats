@@ -59,15 +59,32 @@ every note is taken at its word.
 Write a `## Cele` section and the goals panel appears. Leave it out and it does
 not — no empty panel, no nagging.
 
+Three ways to write a goal, mixable in one section:
+
 ```markdown
 ## Cele
 
 - Project X v1.5 — offline mode :: 80 / 85
-- Documentation :: 40
+- [x] Ship the release
+- [ ] Documentation
+    - [x] readme
+    - [x] settings
+    - [ ] screenshots
 ```
 
-First number is the plan, second what you actually reached. Anything without a
-`::` is treated as prose and ignored, so notes can share the section.
+**A percentage** — `:: plan / actual`. First number is the plan, second what you
+reached. Only the plan is required.
+
+**A checkbox** — done or not, no number to keep current.
+
+**A checkbox with sub-tasks** — progress is their tally, and the panel shows
+`2 / 3` instead of a plan figure. A dropped sub-task (`- [-]`) leaves the count
+entirely: it is no longer part of the plan, so counting it as outstanding would
+keep a finished goal looking unfinished. An in-progress one (`- [/]`) counts as
+not done yet.
+
+Anything without `::` and without a checkbox is prose and is ignored, so notes
+can share the section.
 
 ## Weeks
 

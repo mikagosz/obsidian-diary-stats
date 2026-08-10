@@ -130,7 +130,16 @@ export default class DiaryStatsPlugin extends Plugin {
 			const goals = await collectGoals(this.app, file, this.sources);
 			// Silence is the feature: no goals written means no panel, no scolding.
 			if (goals.length > 0) {
-				goalBars(panel(root, "Cele", `${goals.length} · plan kontra realizacja`), goals);
+				// Two kinds of goal read differently, so the caption says which one
+				// this note is using rather than guessing a single wording.
+				const counted = goals.filter((g) => g.tasks);
+				const done = counted.reduce((sum, g) => sum + (g.tasks?.done ?? 0), 0);
+				const all = counted.reduce((sum, g) => sum + (g.tasks?.total ?? 0), 0);
+				const caption =
+					counted.length === goals.length
+						? `${done} z ${all} zadań zamkniętych`
+						: `${goals.length} · plan kontra realizacja`;
+				goalBars(panel(root, "Cele", caption), goals);
 			}
 		}
 

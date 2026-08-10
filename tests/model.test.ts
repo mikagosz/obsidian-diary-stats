@@ -170,6 +170,52 @@ describe("parseGoals", () => {
 			{ name: "Cel", plan: 100, actual: 100 },
 		]);
 	});
+
+	it("reads a bare checkbox as done or not, so no percent has to be typed", () => {
+		expect(parseGoals(["- [x] Wydanie 0.3", "- [ ] Dokumentacja"])).toEqual([
+			{ name: "Wydanie 0.3", plan: 100, actual: 100, tasks: { done: 1, total: 1 } },
+			{ name: "Dokumentacja", plan: 100, actual: 0, tasks: { done: 0, total: 1 } },
+		]);
+	});
+
+	it("counts sub-tasks as the progress of the goal above them", () => {
+		expect(
+			parseGoals([
+				"- [ ] Wydanie 0.3",
+				"    - [x] testy",
+				"    - [x] dokumentacja",
+				"    - [ ] tag",
+				"- [ ] Sprzątanie",
+				"    - [x] jedno",
+			]),
+		).toEqual([
+			{ name: "Wydanie 0.3", plan: 100, actual: 67, tasks: { done: 2, total: 3 } },
+			{ name: "Sprzątanie", plan: 100, actual: 100, tasks: { done: 1, total: 1 } },
+		]);
+	});
+
+	it("leaves a dropped sub-task out of the tally instead of counting it as outstanding", () => {
+		expect(parseGoals(["- [ ] Cel", "    - [x] zrobione", "    - [-] porzucone"])).toEqual([
+			{ name: "Cel", plan: 100, actual: 100, tasks: { done: 1, total: 1 } },
+		]);
+	});
+
+	it("treats an in-progress sub-task as not done yet", () => {
+		expect(parseGoals(["- [ ] Cel", "    - [/] w toku", "    - [x] zrobione"])).toEqual([
+			{ name: "Cel", plan: 100, actual: 50, tasks: { done: 1, total: 2 } },
+		]);
+	});
+
+	it("mixes hand-written percentages and checkboxes in one section", () => {
+		expect(parseGoals(["- Dokumentacja :: 40 / 40", "- [x] Wydanie"])).toEqual([
+			{ name: "Dokumentacja", plan: 40, actual: 40 },
+			{ name: "Wydanie", plan: 100, actual: 100, tasks: { done: 1, total: 1 } },
+		]);
+	});
+
+	it("ignores a goal whose every sub-task was dropped", () => {
+		expect(parseGoals(["- [ ] Cel", "    - [-] jedno", "    - [-] drugie"])).toEqual([]);
+	});
 });
 
 describe("axisTicks", () => {
