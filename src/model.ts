@@ -12,9 +12,9 @@
  * treated as absent instead.
  */
 export function asText(value: unknown): string {
-	if (typeof value === "string") return value;
-	if (typeof value === "number" || typeof value === "boolean") return String(value);
-	return "";
+	if (typeof value === 'string') return value;
+	if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+	return '';
 }
 
 /**
@@ -39,9 +39,9 @@ export function axisTicks(max: number, most = 4): number[] {
 	return ticks;
 }
 
-export type TaskState = "planned" | "inProgress" | "done" | "dropped";
+export type TaskState = 'planned' | 'inProgress' | 'done' | 'dropped';
 
-export const TASK_STATES: TaskState[] = ["done", "inProgress", "planned", "dropped"];
+export const TASK_STATES: TaskState[] = ['done', 'inProgress', 'planned', 'dropped'];
 
 export interface Day {
 	/** ISO date, YYYY-MM-DD */
@@ -79,15 +79,15 @@ export interface Goal {
  * silently dropping it would understate the backlog.
  */
 export function taskState(marker: string | undefined): TaskState {
-	switch ((marker ?? " ").toLowerCase()) {
-		case "x":
-			return "done";
-		case "/":
-			return "inProgress";
-		case "-":
-			return "dropped";
+	switch ((marker ?? ' ').toLowerCase()) {
+		case 'x':
+			return 'done';
+		case '/':
+			return 'inProgress';
+		case '-':
+			return 'dropped';
 		default:
-			return "planned";
+			return 'planned';
 	}
 }
 
@@ -128,7 +128,7 @@ function iso(year: number, month: number, day: number): string {
 }
 
 function pad(n: number): string {
-	return String(n).padStart(2, "0");
+	return String(n).padStart(2, '0');
 }
 
 /**
@@ -263,7 +263,7 @@ export function parseGoals(lines: string[]): Goal[] {
 	const items: Item[] = [];
 	for (const raw of lines) {
 		const m = raw.match(ITEM);
-		if (m) items.push({ indent: m[1]?.length ?? 0, marker: m[2], text: (m[3] ?? "").trim() });
+		if (m) items.push({ indent: m[1]?.length ?? 0, marker: m[2], text: (m[3] ?? '').trim() });
 	}
 	if (items.length === 0) return [];
 
@@ -275,7 +275,7 @@ export function parseGoals(lines: string[]): Goal[] {
 
 		const manual = item.text.match(MANUAL);
 		if (manual) {
-			const name = (manual[1] ?? "").trim();
+			const name = (manual[1] ?? '').trim();
 			if (!name) continue;
 			goals.push({
 				name,
@@ -295,10 +295,10 @@ export function parseGoals(lines: string[]): Goal[] {
 		}
 
 		const counted = (children.length > 0 ? children : [item]).filter(
-			(t) => taskState(t.marker) !== "dropped",
+			(t) => taskState(t.marker) !== 'dropped',
 		);
 		if (counted.length === 0) continue;
-		const done = counted.filter((t) => taskState(t.marker) === "done").length;
+		const done = counted.filter((t) => taskState(t.marker) === 'done').length;
 
 		goals.push({
 			name: item.text,
