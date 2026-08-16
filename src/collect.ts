@@ -4,7 +4,7 @@
  * with what the rest of Obsidian believes about the notes.
  */
 
-import type { App, TFile } from "obsidian";
+import { type App, TFile, Vault } from 'obsidian';
 import {
 	asText,
 	type Day,
@@ -14,7 +14,7 @@ import {
 	parseGoals,
 	type Range,
 	taskState,
-} from "./model";
+} from './model';
 
 const SESSION_LINK = /^\d{4}-\d{2}-\d{2}-/;
 const DATE_PREFIX = /^(\d{4}-\d{2}-\d{2})/;
@@ -36,12 +36,33 @@ function dateOf(file: TFile): string | null {
 	return match?.[1] ?? null;
 }
 
+/**
+ * The day notes, and only those.
+ *
+ * Walking the diary folder rather than filtering `getMarkdownFiles()` matters on
+ * a large vault: the filter version paid for every note in the vault on every
+ * render of every block, while the diary is one folder out of hundreds. A missing
+ * folder simply yields nothing — the panel then says the period has no days,
+ * which is the truth.
+ */
+function diaryFiles(app: App, folder: string): TFile[] {
+	const root = app.vault.getFolderByPath(folder);
+	if (!root) return [];
+
+	const files: TFile[] = [];
+	Vault.recurseChildren(root, (child) => {
+		// Day notes live in dated subfolders (`2026/Dni/08 Sierpień/`), so this has
+		// to go all the way down, not one level.
+		if (child instanceof TFile && child.extension === 'md') files.push(child);
+	});
+	return files;
+}
+
 export function collectDays(app: App, range: Range, sources: Sources): Day[] {
 	const days: Day[] = [];
 	const casing = projectCasing(sources.projectNames);
 
-	for (const file of app.vault.getMarkdownFiles()) {
-		if (!file.path.startsWith(`${sources.diaryFolder}/`)) continue;
+	for (const file of diaryFiles(app, sources.diaryFolder)) {
 		const date = dateOf(file);
 		if (!date || !inRange(date, range)) continue;
 
@@ -49,7 +70,7 @@ export function collectDays(app: App, range: Range, sources: Sources): Day[] {
 		const day: Day = { date, path: file.path, sessions: [], projects: [], tasks: emptyTasks() };
 
 		for (const link of cache?.links ?? []) {
-			const name = (link.link.split("#")[0] ?? "").split("|")[0]?.trim() ?? "";
+			const name = (link.link.split('#')[0] ?? '').split('|')[0]?.trim() ?? '';
 			if (SESSION_LINK.test(name)) day.sessions.push(name);
 		}
 
@@ -58,6 +79,10 @@ export function collectDays(app: App, range: Range, sources: Sources): Day[] {
 			day.tasks[taskState(item.task)] += 1;
 		}
 
+		// Not cached across days on purpose: `getFirstLinkpathDest` resolves a link
+		// relative to the note it was written in, so the same session name can point
+		// at different files from different days. Both calls behind it are cache
+		// lookups anyway — the expensive part was the vault-wide scan above.
 		for (const session of day.sessions) {
 			day.projects.push(...projectsOfSession(app, session, file.path, casing));
 		}
@@ -95,14 +120,14 @@ function projectsOfSession(
 	const tags: unknown[] = Array.isArray(raw) ? raw : [];
 	return tags
 		.map((tag) => asText(tag))
-		.filter((tag) => tag.startsWith("projekt/"))
-		.map((tag) => canonical(tag.slice("projekt/".length), casing))
+		.filter((tag) => tag.startsWith('projekt/'))
+		.map((tag) => canonical(tag.slice('projekt/'.length), casing))
 		.filter(Boolean);
 }
 
 /** Case, spaces, dashes and underscores all collapse, so every spelling lands on one key. */
 function foldKey(name: string): string {
-	return name.toLowerCase().replace(/[\s_-]+/g, "");
+	return name.toLowerCase().replace(/[\s_-]+/g, '');
 }
 
 /**
@@ -126,7 +151,7 @@ export function projectCasing(names: readonly string[]): ReadonlyMap<string, str
 
 export function canonical(name: string, casing?: ReadonlyMap<string, string>): string {
 	const trimmed = name.trim();
-	if (!trimmed) return "";
+	if (!trimmed) return '';
 	const known = casing?.get(foldKey(trimmed));
 	if (known) return known;
 	// Unknown project: keep what the user wrote, but give a bare slug a capital
@@ -150,7 +175,7 @@ export async function collectGoals(app: App, file: TFile, sources: Sources): Pro
 	if (!start) return [];
 	const next = headings.slice(index + 1).find((h) => h.level <= start.level);
 	const text = await app.vault.cachedRead(file);
-	const lines = text.split("\n");
+	const lines = text.split('\n');
 	const from = start.position.end.line + 1;
 	const to = next ? next.position.start.line : lines.length;
 

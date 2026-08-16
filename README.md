@@ -116,12 +116,19 @@ validation was done against.
 
 ## Installation
 
-Not in the community plugin catalogue, so install it by hand:
+**Settings → Community plugins → Browse**, search for *Diary Stats*, install and
+enable it. Updates then arrive on their own.
+
+<details>
+<summary>Installing by hand, for a pre-release build</summary>
 
 1. Take `main.js`, `manifest.json` and `styles.css` from a release (or build them —
    `npm install && npm run build`).
 2. Put the three files in `<vault>/.obsidian/plugins/diary-stats/`.
 3. Reload Obsidian and enable **Diary Stats** under Settings → Community plugins.
+
+A copy installed this way does not update itself.
+</details>
 
 Needs Obsidian 1.12.7 or newer. Runs on desktop and mobile — nothing here touches
 the file system directly.

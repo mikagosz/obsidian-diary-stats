@@ -1,0 +1,44 @@
+# One Node version, not a matrix. The template's 20/22/24 matrix failed on 20,
+# because running .ts files directly needs type stripping, which Node only has
+# from 22.6. It passed locally and the failure arrived by email.
+# If you ever really support several versions, add the matrix deliberately and
+# declare "engines.node" in package.json.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint and format (Biome)
+        run: npm run lint -- --reporter=github
+
+      - name: Obsidian rules
+        run: npm run lint:obsidian
+
+      - name: Types
+        run: npx tsc --noEmit
+
+      - name: Tests
+        run: npm run check
+
+      - name: Build
+        run: npm run build

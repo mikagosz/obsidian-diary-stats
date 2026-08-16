@@ -1,4 +1,4 @@
-import { type MarkdownPostProcessorContext, Plugin, TFile } from "obsidian";
+import { type MarkdownPostProcessorContext, Plugin, TFile } from 'obsidian';
 import {
 	barRows,
 	donut,
@@ -10,8 +10,8 @@ import {
 	type Point,
 	type Slice,
 	sparkline,
-} from "./charts";
-import { collectDays, collectGoals, type Sources } from "./collect";
+} from './charts';
+import { collectDays, collectGoals, type Sources } from './collect';
 import {
 	type Day,
 	daysInMonth,
@@ -24,27 +24,55 @@ import {
 	topWithRest,
 	trend,
 	weeksOfMonth,
-} from "./model";
+} from './model';
 import {
 	DEFAULT_SETTINGS,
 	type DiaryStatsSettings,
 	DiaryStatsSettingTab,
 	projectNameList,
-} from "./settings";
+} from './settings';
 
-const PANELS = ["naglowek", "cele", "projekty", "aktywnosc", "zadania", "metryki", "odnosniki"] as const;
+const PANELS = [
+	'naglowek',
+	'cele',
+	'projekty',
+	'aktywnosc',
+	'zadania',
+	'metryki',
+	'odnosniki',
+] as const;
 type Panel = (typeof PANELS)[number];
 
 // Capitalised, matching the month names in the note and folder names.
 const MONTHS = [
-	"Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
-	"Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień",
+	'Styczeń',
+	'Luty',
+	'Marzec',
+	'Kwiecień',
+	'Maj',
+	'Czerwiec',
+	'Lipiec',
+	'Sierpień',
+	'Wrzesień',
+	'Październik',
+	'Listopad',
+	'Grudzień',
 ];
-const WEEKDAYS = ["Nd", "Pn", "Wt", "Śr", "Cz", "Pt", "So"];
+const WEEKDAYS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So'];
 /** Genitive, for week titles like "Tydzień 1 (1–7 sierpnia)". */
 const MONTHS_OF = [
-	"stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
-	"lipca", "sierpnia", "września", "października", "listopada", "grudnia",
+	'stycznia',
+	'lutego',
+	'marca',
+	'kwietnia',
+	'maja',
+	'czerwca',
+	'lipca',
+	'sierpnia',
+	'września',
+	'października',
+	'listopada',
+	'grudnia',
 ];
 
 export default class DiaryStatsPlugin extends Plugin {
@@ -54,12 +82,12 @@ export default class DiaryStatsPlugin extends Plugin {
 		await this.loadSettings();
 		this.addSettingTab(new DiaryStatsSettingTab(this.app, this));
 
-		this.registerMarkdownCodeBlockProcessor("diary-stats", async (source, el, ctx) => {
+		this.registerMarkdownCodeBlockProcessor('diary-stats', async (source, el, ctx) => {
 			try {
 				await this.render(source, el, ctx);
 			} catch (error) {
 				el.createDiv({
-					cls: "ds-error",
+					cls: 'ds-error',
 					text: `Diary Stats: ${error instanceof Error ? error.message : String(error)}`,
 				});
 			}
@@ -91,42 +119,42 @@ export default class DiaryStatsPlugin extends Plugin {
 		ctx: MarkdownPostProcessorContext,
 	): Promise<void> {
 		const file = this.app.vault.getAbstractFileByPath(ctx.sourcePath);
-		if (!(file instanceof TFile)) throw new Error("nie widzę tej notatki");
+		if (!(file instanceof TFile)) throw new Error('nie widzę tej notatki');
 
 		const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
 		const range = rangeFromFrontmatter(fm);
 		if (!range) {
 			throw new Error(
-				"ta notatka nie mówi, jaki okres opisuje — potrzebuję `od:` i `do:`, albo `miesiac:`, albo `rok:` we frontmatterze",
+				'ta notatka nie mówi, jaki okres opisuje — potrzebuję `od:` i `do:`, albo `miesiac:`, albo `rok:` we frontmatterze',
 			);
 		}
 
 		const wanted = parsePanels(source);
 		const days = collectDays(this.app, range, this.sources);
-		const root = el.createDiv({ cls: "ds-root" });
+		const root = el.createDiv({ cls: 'ds-root' });
 
-		if (wanted.has("naglowek")) {
+		if (wanted.has('naglowek')) {
 			const kind = spanKind(range);
 			header(
-				root.createDiv({ cls: "ds-panel ds-panel-header" }),
-				`${{ week: "TYGODNIOWE", month: "MIESIĘCZNE", year: "ROCZNE" }[kind]} PODSUMOWANIE`,
+				root.createDiv({ cls: 'ds-panel ds-panel-header' }),
+				`${{ week: 'TYGODNIOWE', month: 'MIESIĘCZNE', year: 'ROCZNE' }[kind]} PODSUMOWANIE`,
 				periodTitle(range, kind, file.basename),
 				[
-					{ label: "Okres", value: `${dmy(range.from)} – ${dmy(range.to)}` },
+					{ label: 'Okres', value: `${dmy(range.from)} – ${dmy(range.to)}` },
 					{
-						label: "Dni z wpisem",
+						label: 'Dni z wpisem',
 						value: `${days.length} / ${eachDate(range).length}`,
 					},
-					{ label: "Sesje", value: String(days.reduce((s, d) => s + d.sessions.length, 0)) },
+					{ label: 'Sesje', value: String(days.reduce((s, d) => s + d.sessions.length, 0)) },
 					{
-						label: "Zamknięte zadania",
+						label: 'Zamknięte zadania',
 						value: String(days.reduce((s, d) => s + d.tasks.done, 0)),
 					},
 				],
 			);
 		}
 
-		if (wanted.has("cele")) {
+		if (wanted.has('cele')) {
 			const goals = await collectGoals(this.app, file, this.sources);
 			// Silence is the feature: no goals written means no panel, no scolding.
 			if (goals.length > 0) {
@@ -139,82 +167,79 @@ export default class DiaryStatsPlugin extends Plugin {
 					counted.length === goals.length
 						? `${done} z ${all} zadań zamkniętych`
 						: `${goals.length} · plan kontra realizacja`;
-				goalBars(panel(root, "Cele", caption), goals);
+				goalBars(panel(root, 'Cele', caption), goals);
 			}
 		}
 
-		if (wanted.has("projekty")) {
-			const slices = topWithRest(
-				projectTally(days),
-				this.settings.maxProjects,
-				"Pozostałe",
-			).map(
+		if (wanted.has('projekty')) {
+			const slices = topWithRest(projectTally(days), this.settings.maxProjects, 'Pozostałe').map(
 				(entry, i): Slice => ({
 					label: entry.label,
 					value: entry.value,
 					tone: `${i + 1}`,
-					...(entry.members ? { detail: entry.members.join(", ") } : {}),
+					...(entry.members ? { detail: entry.members.join(', ') } : {}),
 				}),
 			);
 			const sessions = days.reduce((sum, d) => sum + d.sessions.length, 0);
 			donut(
-				panel(root, "Rozkład na projekty", "wzmianki projektu w sesjach okresu"),
+				panel(root, 'Rozkład na projekty', 'wzmianki projektu w sesjach okresu'),
 				slices,
 				String(sessions),
-				sessions === 1 ? "sesja" : "sesji",
+				sessions === 1 ? 'sesja' : 'sesji',
 			);
 		}
 
-		if (wanted.has("aktywnosc")) {
+		if (wanted.has('aktywnosc')) {
 			const span = spanKind(range);
 			const box = panel(
 				root,
-				"Aktywność w czasie",
-				span === "year" ? "sesje w kolejnych miesiącach" : "sesje w kolejnych dniach",
+				'Aktywność w czasie',
+				span === 'year' ? 'sesje w kolejnych miesiącach' : 'sesje w kolejnych dniach',
 			);
-			if (span === "year") {
-				barRows(box, monthPoints(days, range), "sesji");
+			if (span === 'year') {
+				barRows(box, monthPoints(days, range), 'sesji');
 			} else {
-				lineChart(box, dayPoints(days, range), "sesji");
+				lineChart(box, dayPoints(days, range), 'sesji');
 			}
-			if (span === "month") {
+			if (span === 'month') {
 				barRows(
-					panel(root, "Cztery tygodnie", "ten sam miesiąc w czterech kawałkach"),
+					panel(root, 'Cztery tygodnie', 'ten sam miesiąc w czterech kawałkach'),
 					weekPoints(days, range),
-					"sesji",
+					'sesji',
 				);
 			}
 		}
 
-		if (wanted.has("zadania")) {
+		if (wanted.has('zadania')) {
 			const tasks = tallyTasks(days);
 			const total = tasks.done + tasks.inProgress + tasks.planned + tasks.dropped;
 			donut(
-				panel(root, "Zadania", "stan na koniec okresu"),
+				panel(root, 'Zadania', 'stan na koniec okresu'),
 				[
-					{ label: "Ukończone", value: tasks.done, tone: "done" },
-					{ label: "W trakcie", value: tasks.inProgress, tone: "progress" },
-					{ label: "Zaplanowane", value: tasks.planned, tone: "planned" },
-					{ label: "Porzucone", value: tasks.dropped, tone: "dropped" },
+					{ label: 'Ukończone', value: tasks.done, tone: 'done' },
+					{ label: 'W trakcie', value: tasks.inProgress, tone: 'progress' },
+					{ label: 'Zaplanowane', value: tasks.planned, tone: 'planned' },
+					{ label: 'Porzucone', value: tasks.dropped, tone: 'dropped' },
 				],
 				String(total),
-				total === 1 ? "zadanie" : "zadań",
+				total === 1 ? 'zadanie' : 'zadań',
 			);
 		}
 
-		if (wanted.has("metryki")) {
-			this.metrics(panel(root, "Kluczowe metryki", "trend wewnątrz okresu"), days, range);
+		if (wanted.has('metryki')) {
+			this.metrics(panel(root, 'Kluczowe metryki', 'trend wewnątrz okresu'), days, range);
 		}
 
-		if (wanted.has("odnosniki")) {
-			// Ten panel prawie zawsze stoi pod własnym nagłówkiem `## Powiązane` na dole
-			// notatki. Wtedy tytuł panelu byłby drugim nagłówkiem pod pierwszym, więc
-			// go nie ma — pojawia się tylko, gdy blok rysuje też coś innego.
+		if (wanted.has('odnosniki')) {
+			// This panel almost always sits under a `## Powiązane` heading of its own
+			// at the foot of the note. A panel title would then be a second heading
+			// under the first, so it only appears when the block draws something else
+			// as well.
 			const sam = wanted.size === 1;
 			linkGroups(
 				sam
-					? root.createDiv({ cls: "ds-panel ds-panel-bare" })
-					: panel(root, "Powiązane notatki", "wszystko klikalne, lista rośnie sama"),
+					? root.createDiv({ cls: 'ds-panel ds-panel-bare' })
+					: panel(root, 'Powiązane notatki', 'wszystko klikalne, lista rośnie sama'),
 				this.linksOf(days, range, ctx.sourcePath),
 			);
 		}
@@ -231,10 +256,10 @@ export default class DiaryStatsPlugin extends Plugin {
 		const kind = spanKind(range);
 		const targets: { target: string; label: string }[] = [];
 
-		if (kind === "week") {
+		if (kind === 'week') {
 			targets.push({ target: monthNote(year, month), label: `${MONTHS[month - 1]} ${year}` });
 			targets.push({ target: yearNote(year), label: String(year) });
-		} else if (kind === "month") {
+		} else if (kind === 'month') {
 			targets.push({ target: yearNote(year), label: String(year) });
 			for (const i of weeksOfMonth(year, month).keys()) {
 				targets.push({ target: weekNote(year, month, i + 1), label: `Tydzień ${i + 1}` });
@@ -249,7 +274,7 @@ export default class DiaryStatsPlugin extends Plugin {
 		const exists = (target: string) =>
 			this.app.metadataCache.getFirstLinkpathDest(target, fromPath) !== null;
 		return {
-			title: "Wyżej i niżej",
+			title: 'Wyżej i niżej',
 			links: targets.map((entry) => ({ ...entry, missing: !exists(entry.target) })),
 		};
 	}
@@ -265,12 +290,12 @@ export default class DiaryStatsPlugin extends Plugin {
 		const heading = file
 			? this.app.metadataCache.getFileCache(file)?.headings?.find((h) => h.level === 1)
 			: undefined;
-		// „Sesja: …" w grupie zatytułowanej SESJE to powtórzenie — zdejmujemy.
-		// „Sesja:", „Sesja —", „Sesja 2026-08-06 —" — grupa nazywa się SESJE, przedrostek
-		// tylko zjada miejsce w etykiecie.
-		const title = heading?.heading.replace(/^\s*Sesja\b[\s\d-]*[—:–-]?\s*/i, "").trim();
+		// The group is already titled SESJE, so a "Sesja: …" prefix on every label is
+		// a repetition that only eats width. Strips the shapes actually written:
+		// "Sesja:", "Sesja —", "Sesja 2026-08-06 —".
+		const title = heading?.heading.replace(/^\s*Sesja\b[\s\d-]*[—:–-]?\s*/i, '').trim();
 		if (title) return title;
-		return linkName.replace(/^\d{4}-\d{2}-\d{2}-/, "").replace(/-/g, " ");
+		return linkName.replace(/^\d{4}-\d{2}-\d{2}-/, '').replace(/-/g, ' ');
 	}
 
 	/**
@@ -281,7 +306,8 @@ export default class DiaryStatsPlugin extends Plugin {
 		const sessions = new Map<string, string>();
 		const projects = new Set<string>();
 		for (const day of days) {
-			for (const session of day.sessions) sessions.set(session, this.sessionLabel(session, fromPath));
+			for (const session of day.sessions)
+				sessions.set(session, this.sessionLabel(session, fromPath));
 			for (const project of day.projects) projects.add(project);
 		}
 
@@ -291,20 +317,20 @@ export default class DiaryStatsPlugin extends Plugin {
 		return [
 			this.navigation(days, range, fromPath),
 			{
-				title: "Dni",
+				title: 'Dni',
 				links: days.map((day) => ({
-					target: day.path.replace(/\.md$/, "").split("/").pop() ?? day.date,
+					target: day.path.replace(/\.md$/, '').split('/').pop() ?? day.date,
 					label: dayLabel(day.date),
 				})),
 			},
 			{
-				title: "Sesje",
+				title: 'Sesje',
 				links: [...sessions.entries()]
 					.sort((a, b) => a[0].localeCompare(b[0]))
 					.map(([target, label]) => ({ target, label, missing: !exists(target) })),
 			},
 			{
-				title: "Projekty",
+				title: 'Projekty',
 				links: [...projects]
 					.sort((a, b) => a.localeCompare(b))
 					.map((target) => ({ target, label: target, missing: !exists(target) })),
@@ -318,46 +344,45 @@ export default class DiaryStatsPlugin extends Plugin {
 	 */
 	private metrics(host: HTMLElement, days: Day[], range: Range): void {
 		const buckets = bucketsOf(range);
-		const table = host.createDiv({ cls: "ds-metrics" });
+		const table = host.createDiv({ cls: 'ds-metrics' });
 
 		const rows: { name: string; value: string; series: number[] }[] = [
 			{
-				name: "Sesje",
+				name: 'Sesje',
 				value: String(days.reduce((s, d) => s + d.sessions.length, 0)),
 				series: buckets.map((b) => sum(days, b, (d) => d.sessions.length)),
 			},
 			{
-				name: "Zadania ukończone",
+				name: 'Zadania ukończone',
 				value: String(days.reduce((s, d) => s + d.tasks.done, 0)),
 				series: buckets.map((b) => sum(days, b, (d) => d.tasks.done)),
 			},
 			{
-				name: "Dni z wpisem",
+				name: 'Dni z wpisem',
 				value: String(days.length),
 				series: buckets.map((b) => days.filter((d) => inRange(d.date, b)).length),
 			},
 			{
-				name: "Projekty",
+				name: 'Projekty',
 				value: String(new Set(days.flatMap((d) => d.projects)).size),
 				series: buckets.map(
-					(b) =>
-						new Set(days.filter((d) => inRange(d.date, b)).flatMap((d) => d.projects)).size,
+					(b) => new Set(days.filter((d) => inRange(d.date, b)).flatMap((d) => d.projects)).size,
 				),
 			},
 		];
 
 		for (const row of rows) {
-			const line = table.createDiv({ cls: "ds-metric-row" });
-			line.createSpan({ cls: "ds-metric-name", text: row.name });
-			line.createSpan({ cls: "ds-metric-value", text: row.value });
-			sparkline(line.createDiv({ cls: "ds-metric-spark" }), row.series);
+			const line = table.createDiv({ cls: 'ds-metric-row' });
+			line.createSpan({ cls: 'ds-metric-name', text: row.name });
+			line.createSpan({ cls: 'ds-metric-value', text: row.value });
+			sparkline(line.createDiv({ cls: 'ds-metric-spark' }), row.series);
 			const change = trend(row.series);
-			const chip = line.createSpan({ cls: "ds-metric-trend" });
+			const chip = line.createSpan({ cls: 'ds-metric-trend' });
 			if (change === null) {
-				chip.setText("—");
+				chip.setText('—');
 			} else {
-				chip.addClass(change > 0 ? "is-up" : change < 0 ? "is-down" : "is-flat");
-				chip.setText(change > 0 ? `↑ ${change}%` : change < 0 ? `↓ ${-change}%` : "→ 0%");
+				chip.addClass(change > 0 ? 'is-up' : change < 0 ? 'is-down' : 'is-flat');
+				chip.setText(change > 0 ? `↑ ${change}%` : change < 0 ? `↓ ${-change}%` : '→ 0%');
 			}
 		}
 	}
@@ -374,14 +399,14 @@ function yearNote(year: number): string {
 
 function weekNote(year: number, month: number, nr: number): string {
 	const week = weeksOfMonth(year, month)[nr - 1];
-	if (!week) return "";
+	if (!week) return '';
 	const from = Number(week.from.slice(8, 10));
 	const to = Number(week.to.slice(8, 10));
 	return `Tydzień ${nr} (${from}–${to} ${MONTHS_OF[month - 1]})`;
 }
 
 function dayLabel(date: string): string {
-	const weekday = WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()] ?? "";
+	const weekday = WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()] ?? '';
 	return `${weekday} ${Number(date.slice(8, 10))}.${date.slice(5, 7)}`;
 }
 
@@ -389,11 +414,11 @@ function dayLabel(date: string): string {
  * Big name at the top. A week has no natural short name, so it keeps the one the
  * file already carries — that name is what the reader clicked to get here.
  */
-function periodTitle(range: Range, kind: "week" | "month" | "year", basename: string): string {
+function periodTitle(range: Range, kind: 'week' | 'month' | 'year', basename: string): string {
 	const year = Number(range.from.slice(0, 4));
-	if (kind === "year") return String(year);
-	if (kind === "month") return `${MONTHS[Number(range.from.slice(5, 7)) - 1] ?? ""} ${year}`;
-	return basename.replace(/\s*—\s*podsumowanie$/i, "");
+	if (kind === 'year') return String(year);
+	if (kind === 'month') return `${MONTHS[Number(range.from.slice(5, 7)) - 1] ?? ''} ${year}`;
+	return basename.replace(/\s*—\s*podsumowanie$/i, '');
 }
 
 function dmy(iso: string): string {
@@ -401,31 +426,31 @@ function dmy(iso: string): string {
 }
 
 function panel(root: HTMLElement, title: string, caption: string): HTMLElement {
-	const box = root.createDiv({ cls: "ds-panel" });
-	const head = box.createDiv({ cls: "ds-panel-head" });
-	head.createEl("h4", { cls: "ds-panel-title", text: title });
-	head.createSpan({ cls: "ds-panel-caption", text: caption });
-	return box.createDiv({ cls: "ds-panel-body" });
+	const box = root.createDiv({ cls: 'ds-panel' });
+	const head = box.createDiv({ cls: 'ds-panel-head' });
+	head.createEl('h4', { cls: 'ds-panel-title', text: title });
+	head.createSpan({ cls: 'ds-panel-caption', text: caption });
+	return box.createDiv({ cls: 'ds-panel-body' });
 }
 
 function parsePanels(source: string): Set<Panel> {
 	const line = source
-		.split("\n")
+		.split('\n')
 		.map((l) => l.trim())
-		.find((l) => l.toLowerCase().startsWith("panele:"));
+		.find((l) => l.toLowerCase().startsWith('panele:'));
 	if (!line) return new Set(PANELS);
 	const asked = line
-		.slice(line.indexOf(":") + 1)
-		.split(",")
+		.slice(line.indexOf(':') + 1)
+		.split(',')
 		.map((name) => name.trim().toLowerCase())
 		.filter((name): name is Panel => (PANELS as readonly string[]).includes(name));
 	return asked.length > 0 ? new Set(asked) : new Set(PANELS);
 }
 
-function spanKind(range: Range): "week" | "month" | "year" {
+function spanKind(range: Range): 'week' | 'month' | 'year' {
 	const days = eachDate(range).length;
-	if (days <= 10) return "week";
-	return days <= 31 ? "month" : "year";
+	if (days <= 10) return 'week';
+	return days <= 31 ? 'month' : 'year';
 }
 
 function sum(days: Day[], range: Range, of: (day: Day) => number): number {
@@ -441,7 +466,7 @@ function dayPoints(days: Day[], range: Range): Point[] {
 		return {
 			label: `${weekday} ${Number(date.slice(8, 10))}.${date.slice(5, 7)}`,
 			value: day?.sessions.length ?? 0,
-			note: day ? `${day.tasks.done} zamkniętych` : "brak wpisu",
+			note: day ? `${day.tasks.done} zamkniętych` : 'brak wpisu',
 		};
 	});
 }
@@ -452,7 +477,7 @@ function weekPoints(days: Day[], range: Range): Point[] {
 	return weeksOfMonth(year, month).map((week, i) => ({
 		label: `Tydzień ${i + 1}`,
 		value: sum(days, week, (d) => d.sessions.length),
-		note: `${Number(week.from.slice(8, 10))}–${Number(week.to.slice(8, 10))} ${MONTHS[month - 1] ?? ""}`,
+		note: `${Number(week.from.slice(8, 10))}–${Number(week.to.slice(8, 10))} ${MONTHS[month - 1] ?? ''}`,
 	}));
 }
 
@@ -460,8 +485,8 @@ function monthPoints(days: Day[], range: Range): Point[] {
 	const year = Number(range.from.slice(0, 4));
 	return MONTHS.map((name, i) => {
 		const month: Range = {
-			from: `${year}-${String(i + 1).padStart(2, "0")}-01`,
-			to: `${year}-${String(i + 1).padStart(2, "0")}-${String(daysInMonth(year, i + 1)).padStart(2, "0")}`,
+			from: `${year}-${String(i + 1).padStart(2, '0')}-01`,
+			to: `${year}-${String(i + 1).padStart(2, '0')}-${String(daysInMonth(year, i + 1)).padStart(2, '0')}`,
 		};
 		return { label: name, value: sum(days, month, (d) => d.sessions.length) };
 	}).filter((point) => point.value > 0);
@@ -470,11 +495,11 @@ function monthPoints(days: Day[], range: Range): Point[] {
 /** Sub-periods the sparkline steps through: days for a week, weeks for a month, months for a year. */
 function bucketsOf(range: Range): Range[] {
 	const kind = spanKind(range);
-	if (kind === "week") return eachDate(range).map((date) => ({ from: date, to: date }));
+	if (kind === 'week') return eachDate(range).map((date) => ({ from: date, to: date }));
 	const year = Number(range.from.slice(0, 4));
-	if (kind === "month") return weeksOfMonth(year, Number(range.from.slice(5, 7)));
+	if (kind === 'month') return weeksOfMonth(year, Number(range.from.slice(5, 7)));
 	return MONTHS.map((_, i) => ({
-		from: `${year}-${String(i + 1).padStart(2, "0")}-01`,
-		to: `${year}-${String(i + 1).padStart(2, "0")}-${String(daysInMonth(year, i + 1)).padStart(2, "0")}`,
+		from: `${year}-${String(i + 1).padStart(2, '0')}-01`,
+		to: `${year}-${String(i + 1).padStart(2, '0')}-${String(daysInMonth(year, i + 1)).padStart(2, '0')}`,
 	}));
 }
