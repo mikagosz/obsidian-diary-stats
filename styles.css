@@ -17,6 +17,12 @@
 	--ds-tone-planned: #2a78d6;
 	--ds-tone-dropped: #b6b6b0;
 
+	/* Paski rozwijające „Pozostałe". Rampa od barwy tego właśnie kawałka
+	   pierścienia w głąb fioletu — jedna grupa, jeden przebieg koloru, żaden
+	   rząd nie udaje barwy cudzego kawałka wyżej. */
+	--ds-rank-from: #e34948;
+	--ds-rank-to: #4a3aa7;
+
 	/* Nagłówek panelu — pokrętła do zabawy. Nadpisz je w swoim snippecie CSS
 	   (`.ds-root { --ds-title-size: 1rem; }`) zamiast ruszać kod pluginu. */
 	--ds-title-size: 0.82rem;
@@ -53,6 +59,9 @@
 	--ds-tone-progress: #c98500;
 	--ds-tone-planned: #3987e5;
 	--ds-tone-dropped: #6d6d68;
+
+	--ds-rank-from: #e66767;
+	--ds-rank-to: #9085e9;
 }
 
 /* ── panel ─────────────────────────────────────────────────────────── */
@@ -280,6 +289,87 @@
 	text-align: right;
 	color: var(--ds-ink-soft);
 	font-variant-numeric: tabular-nums;
+}
+
+/* ── ranked bars: wszystkie projekty pod pierścieniem ──────────────── */
+
+.ds-subhead {
+	margin: 1.1rem 0 0.6rem;
+	font-size: var(--ds-caption-size);
+	color: var(--ds-caption-color);
+	letter-spacing: var(--ds-title-spacing);
+	text-transform: var(--ds-title-transform);
+}
+
+.ds-rank {
+	display: flex;
+	flex-direction: column;
+	gap: 0.34rem;
+}
+
+.ds-rank-row {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	font-size: 0.84rem;
+}
+
+.ds-rank-index {
+	flex: 0 0 1.6rem;
+	text-align: right;
+	color: var(--ds-ink-soft);
+	font-variant-numeric: tabular-nums;
+}
+
+.ds-rank-label {
+	flex: 0 0 11rem;
+	color: var(--ds-ink);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ds-rank-track {
+	flex: 1 1 auto;
+	height: 10px;
+	border-radius: 4px;
+	background: var(--ds-track);
+	overflow: hidden;
+}
+
+.ds-rank-fill {
+	height: 100%;
+	/* Width and ramp position are set per row by the chart; both ends of the
+	   ramp, and everything else about the look, stay here. */
+	width: var(--ds-rank-w, 0);
+	border-radius: 4px;
+	background: color-mix(
+		in oklab,
+		var(--ds-rank-to) calc(var(--ds-rank-t, 0) * 100%),
+		var(--ds-rank-from)
+	);
+	min-width: 2px;
+}
+
+.ds-rank-value {
+	flex: 0 0 2.5rem;
+	text-align: right;
+	color: var(--ds-ink);
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+}
+
+.ds-rank-pct {
+	flex: 0 0 3.2rem;
+	text-align: right;
+	color: var(--ds-ink-soft);
+	font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 560px) {
+	.ds-rank-label {
+		flex: 0 0 7rem;
+	}
 }
 
 /* ── goals ─────────────────────────────────────────────────────────── */

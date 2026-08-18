@@ -7,6 +7,7 @@ import {
 	parseGoals,
 	projectTally,
 	rangeFromFrontmatter,
+	rankTally,
 	taskState,
 	topWithRest,
 	trend,
@@ -156,6 +157,46 @@ describe('projectTally and topWithRest', () => {
 
 	it('omits the rest slice when nothing is left over', () => {
 		expect(topWithRest(projectTally(days), 8, 'Pozostałe')).toHaveLength(3);
+	});
+});
+
+describe('rankTally', () => {
+	it('keeps everyone, largest first — nothing is folded away', () => {
+		const tally = new Map([
+			['B', 1],
+			['A', 3],
+			['C', 2],
+		]);
+		expect(rankTally(tally)).toEqual([
+			{ label: 'A', value: 3 },
+			{ label: 'C', value: 2 },
+			{ label: 'B', value: 1 },
+		]);
+	});
+
+	it('breaks a tie by name, so two runs over the same notes never swap rows', () => {
+		const tally = new Map([
+			['Zeta', 2],
+			['Alfa', 2],
+			['Mikro', 2],
+		]);
+		expect(rankTally(tally).map((r) => r.label)).toEqual(['Alfa', 'Mikro', 'Zeta']);
+	});
+
+	it('returns nothing for an empty period rather than an empty-looking row', () => {
+		expect(rankTally(new Map())).toEqual([]);
+	});
+
+	it('lists the same tail the folded slice hides, in the same order', () => {
+		const tally = projectTally([
+			{ date: '2026-08-01', path: '', sessions: [], projects: ['A', 'B'], tasks: blank() },
+			{ date: '2026-08-02', path: '', sessions: [], projects: ['A', 'A', 'C'], tasks: blank() },
+		]);
+		const rest = topWithRest(tally, 1, 'Pozostałe')[1];
+		const tail = rankTally(tally)
+			.slice(1)
+			.map((r) => `${r.label} ${r.value}`);
+		expect(tail).toEqual(rest?.members);
 	});
 });
 

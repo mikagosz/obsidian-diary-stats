@@ -287,6 +287,43 @@ export function barRows(host: HTMLElement, points: Point[], unit: string): void 
 	}
 }
 
+/**
+ * The tail the donut folds away, one row each. Only the tail: the slices above
+ * already have a name, a colour and a number in the legend, and a second copy of
+ * them here would say nothing new.
+ *
+ * Colour runs as one ramp from first row to last instead of eight repeating
+ * hues. Identity is already carried by the name, and a row tinted like a donut
+ * slice it has nothing to do with would be a lie; a ramp reads as one group —
+ * which is exactly what these rows are — and still gives the eye an order.
+ * Length is measured against the longest row here, so the tail spreads across
+ * the whole track; the percentage stays a share of the entire period, so it can
+ * be compared with the legend above.
+ */
+export function rankedBars(host: HTMLElement, rows: Point[], whole: number, from = 0): void {
+	if (rows.length === 0) {
+		host.createDiv({ cls: 'ds-empty', text: 'Nic się nie zwinęło — wszystko widać wyżej.' });
+		return;
+	}
+	const max = Math.max(1, ...rows.map((r) => r.value));
+	const last = Math.max(1, rows.length - 1);
+	const table = host.createDiv({ cls: 'ds-rank' });
+	for (const [i, row] of rows.entries()) {
+		const line = table.createDiv({ cls: 'ds-rank-row' });
+		line.createSpan({ cls: 'ds-rank-index', text: `${from + i + 1}` });
+		line.createSpan({ cls: 'ds-rank-label', text: row.label });
+		const track = line.createDiv({ cls: 'ds-rank-track' });
+		track.createDiv({ cls: 'ds-rank-fill' }).setCssProps({
+			'--ds-rank-w': `${(row.value / max) * 100}%`,
+			// Position on the ramp, 0 at the top row and 1 at the bottom one.
+			'--ds-rank-t': `${i / last}`,
+		});
+		line.createSpan({ cls: 'ds-rank-value', text: `${row.value}` });
+		line.createSpan({ cls: 'ds-rank-pct', text: percent(row.value, whole) });
+		if (row.note) line.setAttribute('title', row.note);
+	}
+}
+
 /** Plan against actual, one row per goal. Actual overlays the planned track. */
 export function goalBars(host: HTMLElement, goals: Goal[]): void {
 	const table = host.createDiv({ cls: 'ds-goals' });

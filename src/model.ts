@@ -189,6 +189,22 @@ export function projectTally(days: Day[]): Map<string, number> {
 	return tally;
 }
 
+export interface Ranked {
+	label: string;
+	value: number;
+}
+
+/**
+ * The whole tally, largest first, ties broken by name so two runs over the same
+ * notes never swap two rows around. Nothing is folded away here — the donut
+ * needs a short list, the bars under it need this one.
+ */
+export function rankTally(tally: Map<string, number>): Ranked[] {
+	return [...tally.entries()]
+		.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+		.map(([label, value]) => ({ label, value }));
+}
+
 /**
  * Largest first, and everything past `keep` folded into one slice. Categorical
  * palettes run out at eight; a ninth generated hue is never the answer.
@@ -198,7 +214,7 @@ export function topWithRest(
 	keep: number,
 	restLabel: string,
 ): { label: string; value: number; members?: string[] }[] {
-	const sorted = [...tally.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+	const sorted = rankTally(tally).map((r): [string, number] => [r.label, r.value]);
 	const head: { label: string; value: number; members?: string[] }[] = sorted
 		.slice(0, keep)
 		.map(([label, value]) => ({ label, value }));

@@ -8,6 +8,7 @@ import {
 	lineChart,
 	linkGroups,
 	type Point,
+	rankedBars,
 	type Slice,
 	sparkline,
 } from './charts';
@@ -20,6 +21,7 @@ import {
 	projectTally,
 	type Range,
 	rangeFromFrontmatter,
+	rankTally,
 	tallyTasks,
 	topWithRest,
 	trend,
@@ -172,7 +174,8 @@ export default class DiaryStatsPlugin extends Plugin {
 		}
 
 		if (wanted.has('projekty')) {
-			const slices = topWithRest(projectTally(days), this.settings.maxProjects, 'Pozostałe').map(
+			const tally = projectTally(days);
+			const slices = topWithRest(tally, this.settings.maxProjects, 'Pozostałe').map(
 				(entry, i): Slice => ({
 					label: entry.label,
 					value: entry.value,
@@ -181,12 +184,23 @@ export default class DiaryStatsPlugin extends Plugin {
 				}),
 			);
 			const sessions = days.reduce((sum, d) => sum + d.sessions.length, 0);
-			donut(
-				panel(root, 'Rozkład na projekty', 'wzmianki projektu w sesjach okresu'),
-				slices,
-				String(sessions),
-				sessions === 1 ? 'sesja' : 'sesji',
-			);
+			const box = panel(root, 'Rozkład na projekty', 'wzmianki projektu w sesjach okresu');
+			donut(box, slices, String(sessions), sessions === 1 ? 'sesja' : 'sesji');
+
+			// The donut stops where the palette does, and past that point "Pozostałe"
+			// hides more than it shows — on a busy month it is the largest slice by far.
+			// The bars below unpack exactly that slice: the tail only, never the rows
+			// the legend already names, so nothing is said twice.
+			const ranked = rankTally(tally);
+			const rest = ranked.slice(this.settings.maxProjects);
+			if (rest.length > 0) {
+				const whole = ranked.reduce((sum, r) => sum + r.value, 0);
+				box.createDiv({
+					cls: 'ds-subhead',
+					text: `W „Pozostałych" (${rest.length})`,
+				});
+				rankedBars(box, rest, whole, this.settings.maxProjects);
+			}
 		}
 
 		if (wanted.has('aktywnosc')) {

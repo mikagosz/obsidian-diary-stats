@@ -19,7 +19,7 @@ Light and dark are two selected palettes, not one flipped — see [Colours](#col
 
 | Panel | Reads |
 |---|---|
-| **Projects** | a donut of which projects the period went into |
+| **Projects** | a donut of which projects the period went into, and — when more of them showed up than the donut has colours — bars unpacking what the folded *rest* slice is made of |
 | **Activity over time** | sessions per day (per month in a yearly note) |
 | **Four weeks** | the month split into its four weeks (monthly notes only) |
 | **Tasks** | planned / in progress / done / dropped |
@@ -46,6 +46,15 @@ folder counts, so `2026-08-09 (niedziela).md` works as well as `2026-08-09.md`.
 
 **Sessions** are links to notes named `YYYY-MM-DD-Something`. **Projects** come
 from each session note's `dotyczy:` list, falling back to its `projekt/…` tags.
+
+The donut runs out of distinguishable colours at eight, so everything past
+**Projects shown separately** folds into one *rest* slice — which on a busy month
+is the largest slice on the chart and says nothing. The bars under the donut list
+that tail, largest first, with the rank it holds overall and its share of the
+whole period. Only the tail: the slices above already have a name and a number in
+the legend. Their colour is one ramp rather than eight repeated hues — the rows
+are one group, and a bar tinted like a donut slice it has nothing to do with
+would be a lie.
 
 List a project under **Project names** in the settings and every spelling of it
 (`FooBar`, `foobar`, `foo-bar`, `FOO BAR`) folds onto the one you wrote, so a
