@@ -21,7 +21,9 @@ import {
 	projectTally,
 	type Range,
 	rangeFromFrontmatter,
+	rangeProblem,
 	rankTally,
+	spanDays,
 	tallyTasks,
 	topWithRest,
 	trend,
@@ -130,6 +132,8 @@ export default class DiaryStatsPlugin extends Plugin {
 				'ta notatka nie mówi, jaki okres opisuje — potrzebuję `od:` i `do:`, albo `miesiac:`, albo `rok:` we frontmatterze',
 			);
 		}
+		const problem = rangeProblem(range);
+		if (problem) throw new Error(problem);
 
 		const wanted = parsePanels(source);
 		const days = collectDays(this.app, range, this.sources);
@@ -145,7 +149,7 @@ export default class DiaryStatsPlugin extends Plugin {
 					{ label: 'Okres', value: `${dmy(range.from)} – ${dmy(range.to)}` },
 					{
 						label: 'Dni z wpisem',
-						value: `${days.length} / ${eachDate(range).length}`,
+						value: `${days.length} / ${spanDays(range)}`,
 					},
 					{ label: 'Sesje', value: String(days.reduce((s, d) => s + d.sessions.length, 0)) },
 					{
@@ -462,7 +466,7 @@ function parsePanels(source: string): Set<Panel> {
 }
 
 function spanKind(range: Range): 'week' | 'month' | 'year' {
-	const days = eachDate(range).length;
+	const days = spanDays(range);
 	if (days <= 10) return 'week';
 	return days <= 31 ? 'month' : 'year';
 }

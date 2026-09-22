@@ -171,6 +171,47 @@ export function eachDate(range: Range): string[] {
 	return out;
 }
 
+/** The longest span a periodic note describes: a leap year. */
+export const MAX_SPAN_DAYS = 366;
+
+const DAY_MS = 86_400_000;
+
+/**
+ * Days in the span, both ends included — by subtraction, not by listing them.
+ * 0 when either end is not a date or the span runs backwards.
+ *
+ * Counting through `eachDate` cost a list of every day just to take its length,
+ * and a render asks for the count several times: a year mistyped as `9026` built
+ * two and a half million strings per call and froze Obsidian for seconds.
+ */
+export function spanDays(range: Range): number {
+	const from = Date.parse(`${range.from}T00:00:00Z`);
+	const to = Date.parse(`${range.to}T00:00:00Z`);
+	if (Number.isNaN(from) || Number.isNaN(to) || to < from) return 0;
+	return Math.round((to - from) / DAY_MS) + 1;
+}
+
+/**
+ * Why this span cannot be drawn, in words for the block — or null when it can.
+ * Checked before anything is counted, so a typo in the front matter costs a
+ * message instead of a frozen window.
+ */
+export function rangeProblem(range: Range): string | null {
+	const from = Date.parse(`${range.from}T00:00:00Z`);
+	const to = Date.parse(`${range.to}T00:00:00Z`);
+	if (Number.isNaN(from) || Number.isNaN(to)) {
+		return `nie rozpoznaję daty w okresie ${range.from} – ${range.to}`;
+	}
+	if (to < from) {
+		return `okres jest odwrócony: od ${range.from} do ${range.to} — sprawdź, czy \`od:\` i \`do:\` nie zamieniły się miejscami`;
+	}
+	const days = spanDays(range);
+	if (days > MAX_SPAN_DAYS) {
+		return `okres ma ${days} dni, a notatka okresowa obejmuje najwyżej rok — sprawdź rok w \`od:\` i \`do:\``;
+	}
+	return null;
+}
+
 export function inRange(date: string, range: Range): boolean {
 	return date >= range.from && date <= range.to;
 }

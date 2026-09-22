@@ -7,7 +7,9 @@ import {
 	parseGoals,
 	projectTally,
 	rangeFromFrontmatter,
+	rangeProblem,
 	rankTally,
+	spanDays,
 	taskState,
 	topWithRest,
 	trend,
@@ -123,6 +125,45 @@ describe('eachDate', () => {
 
 	it('crosses a month boundary and a DST change without dropping a day', () => {
 		expect(eachDate({ from: '2026-10-24', to: '2026-11-02' })).toHaveLength(10);
+	});
+});
+
+describe('spanDays', () => {
+	it('agrees with eachDate on an ordinary span', () => {
+		const range = { from: '2026-10-24', to: '2026-11-02' };
+		expect(spanDays(range)).toBe(eachDate(range).length);
+	});
+
+	it('counts a leap year in full', () => {
+		expect(spanDays({ from: '2024-01-01', to: '2024-12-31' })).toBe(366);
+	});
+
+	it('is 0 for a reversed span and for a date that is not one', () => {
+		expect(spanDays({ from: '2026-08-10', to: '2026-08-01' })).toBe(0);
+		expect(spanDays({ from: '2026-13-01', to: '2026-13-31' })).toBe(0);
+	});
+});
+
+// A year mistyped as 9026 froze Obsidian for seconds: every render listed
+// two and a half million days just to count them.
+describe('rangeProblem', () => {
+	it('accepts a week, a month and a leap year', () => {
+		expect(rangeProblem({ from: '2026-08-01', to: '2026-08-07' })).toBeNull();
+		expect(rangeProblem({ from: '2026-08-01', to: '2026-08-31' })).toBeNull();
+		expect(rangeProblem({ from: '2024-01-01', to: '2024-12-31' })).toBeNull();
+	});
+
+	it('refuses a span longer than a year, whatever the typo', () => {
+		expect(rangeProblem({ from: '2026-08-01', to: '2062-08-07' })).toMatch(/najwyżej rok/);
+		expect(rangeProblem({ from: '2026-08-01', to: '9026-08-07' })).toMatch(/najwyżej rok/);
+	});
+
+	it('refuses a reversed span and says why', () => {
+		expect(rangeProblem({ from: '2026-08-10', to: '2026-08-01' })).toMatch(/odwrócony/);
+	});
+
+	it('refuses a date it cannot read', () => {
+		expect(rangeProblem({ from: '2026-13-01', to: '2026-13-31' })).toMatch(/nie rozpoznaję/);
 	});
 });
 
