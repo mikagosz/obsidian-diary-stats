@@ -146,6 +146,10 @@ export function rangeFromFrontmatter(fm: Record<string, unknown> | undefined): R
 	if (/^\d{4}-\d{2}$/.test(month)) {
 		const y = Number(month.slice(0, 4));
 		const m = Number(month.slice(5, 7));
+		// Month 00 or 13 is a typo. It used to become a span of dates that do not
+		// exist, drawn as an empty week with a link to "undefined 2026". Falling
+		// through to `rok:` would be no better — a whole year under a monthly note.
+		if (m < 1 || m > 12) return null;
 		return { from: iso(y, m, 1), to: iso(y, m, daysInMonth(y, m)) };
 	}
 

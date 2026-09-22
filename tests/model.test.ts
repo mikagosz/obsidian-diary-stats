@@ -108,6 +108,17 @@ describe('rangeFromFrontmatter', () => {
 		});
 	});
 
+	it('treats a month outside 01–12 as no period at all', () => {
+		expect(rangeFromFrontmatter({ miesiac: '2026-13' })).toBeNull();
+		expect(rangeFromFrontmatter({ miesiac: '2026-00' })).toBeNull();
+		// Not even with a year beside it: that would chart twelve months under a monthly note.
+		expect(rangeFromFrontmatter({ miesiac: '2026-13', rok: '2026' })).toBeNull();
+		expect(rangeFromFrontmatter({ miesiac: '2026-12' })).toEqual({
+			from: '2026-12-01',
+			to: '2026-12-31',
+		});
+	});
+
 	it('returns null for a note that is not periodic', () => {
 		expect(rangeFromFrontmatter(undefined)).toBeNull();
 		expect(rangeFromFrontmatter({ tags: ['typ/sesja'] })).toBeNull();
