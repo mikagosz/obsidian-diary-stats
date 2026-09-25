@@ -46,13 +46,15 @@ function tooltip(host: HTMLElement): {
 } {
 	// Visibility is a class, position goes through custom properties: the only
 	// genuinely dynamic values here are the two coordinates, and everything a
-	// theme might want to restyle stays in `styles.css`.
+	// theme might want to restyle stays in `styles.css`. Built once — a move of
+	// the mouse only swaps two strings, instead of two new elements per event.
 	const box = host.createDiv({ cls: 'ds-tip' });
+	const titleEl = box.createDiv({ cls: 'ds-tip-title' });
+	const bodyEl = box.createDiv({ cls: 'ds-tip-body' });
 	return {
 		show(x, y, title, body) {
-			box.empty();
-			box.createDiv({ cls: 'ds-tip-title', text: title });
-			box.createDiv({ cls: 'ds-tip-body', text: body });
+			titleEl.setText(title);
+			bodyEl.setText(body);
 			box.setCssProps({ '--ds-tip-x': `${x}px`, '--ds-tip-y': `${y}px` });
 			box.addClass('is-shown');
 		},
@@ -60,6 +62,32 @@ function tooltip(host: HTMLElement): {
 			box.removeClass('is-shown');
 		},
 	};
+}
+
+/**
+ * Pointer handling at most once per frame. `mousemove` fires faster than the
+ * screen redraws, and each handler reads the layout right after the previous
+ * one changed it — a forced reflow per event. Here the latest event waits for
+ * the frame and the older ones are dropped. The frame is the one of the window
+ * the chart sits in, so a note in a popped-out window keeps its tooltip.
+ */
+function hover(target: Element, onMove: (event: MouseEvent) => void, onLeave: () => void): void {
+	let latest: MouseEvent | null = null;
+	let frame = 0;
+	target.addEventListener('mousemove', (event) => {
+		latest = event as MouseEvent;
+		if (frame) return;
+		frame = target.win.requestAnimationFrame(() => {
+			frame = 0;
+			if (latest) onMove(latest);
+		});
+	});
+	target.addEventListener('mouseleave', () => {
+		if (frame) target.win.cancelAnimationFrame(frame);
+		frame = 0;
+		latest = null;
+		onLeave();
+	});
 }
 
 function total(slices: Slice[]): number {
@@ -114,18 +142,21 @@ export function donut(host: HTMLElement, slices: Slice[], centre: string, captio
 			transform: `rotate(-90 ${size / 2} ${size / 2})`,
 			class: 'ds-arc',
 		});
-		arc.addEventListener('mousemove', (event) => {
-			const box = wrap.getBoundingClientRect();
-			tip.show(
-				event.clientX - box.left,
-				event.clientY - box.top,
-				slice.label,
-				slice.detail
-					? `${slice.value} · ${percent(slice.value, whole)} — ${slice.detail}`
-					: `${slice.value} · ${percent(slice.value, whole)}`,
-			);
-		});
-		arc.addEventListener('mouseleave', () => tip.hide());
+		hover(
+			arc,
+			(event) => {
+				const box = wrap.getBoundingClientRect();
+				tip.show(
+					event.clientX - box.left,
+					event.clientY - box.top,
+					slice.label,
+					slice.detail
+						? `${slice.value} · ${percent(slice.value, whole)} — ${slice.detail}`
+						: `${slice.value} · ${percent(slice.value, whole)}`,
+				);
+			},
+			() => tip.hide(),
+		);
 		offset += length;
 	}
 
@@ -237,34 +268,37 @@ export function lineChart(host: HTMLElement, points: Point[], unit: string): voi
 		height: h - pad.top - pad.bottom,
 		fill: 'transparent',
 	});
-	hit.addEventListener('mousemove', (event) => {
-		const box = root.getBoundingClientRect();
-		const local = ((event.clientX - box.left) / box.width) * w;
-		let nearest = 0;
-		for (let i = 1; i < points.length; i++) {
-			if (Math.abs(x(i) - local) < Math.abs(x(nearest) - local)) nearest = i;
-		}
-		const p = points[nearest];
-		if (!p) return;
-		cross.setAttribute('x1', String(x(nearest)));
-		cross.setAttribute('x2', String(x(nearest)));
-		cross.setAttribute('opacity', '1');
-		halo.setAttribute('cx', String(x(nearest)));
-		halo.setAttribute('cy', String(y(p.value)));
-		halo.setAttribute('opacity', '1');
-		const hostBox = wrap.getBoundingClientRect();
-		tip.show(
-			event.clientX - hostBox.left,
-			event.clientY - hostBox.top,
-			p.label,
-			p.note ? `${p.value} ${unit} · ${p.note}` : `${p.value} ${unit}`,
-		);
-	});
-	hit.addEventListener('mouseleave', () => {
-		cross.setAttribute('opacity', '0');
-		halo.setAttribute('opacity', '0');
-		tip.hide();
-	});
+	hover(
+		hit,
+		(event) => {
+			const box = root.getBoundingClientRect();
+			const local = ((event.clientX - box.left) / box.width) * w;
+			let nearest = 0;
+			for (let i = 1; i < points.length; i++) {
+				if (Math.abs(x(i) - local) < Math.abs(x(nearest) - local)) nearest = i;
+			}
+			const p = points[nearest];
+			if (!p) return;
+			cross.setAttribute('x1', String(x(nearest)));
+			cross.setAttribute('x2', String(x(nearest)));
+			cross.setAttribute('opacity', '1');
+			halo.setAttribute('cx', String(x(nearest)));
+			halo.setAttribute('cy', String(y(p.value)));
+			halo.setAttribute('opacity', '1');
+			const hostBox = wrap.getBoundingClientRect();
+			tip.show(
+				event.clientX - hostBox.left,
+				event.clientY - hostBox.top,
+				p.label,
+				p.note ? `${p.value} ${unit} · ${p.note}` : `${p.value} ${unit}`,
+			);
+		},
+		() => {
+			cross.setAttribute('opacity', '0');
+			halo.setAttribute('opacity', '0');
+			tip.hide();
+		},
+	);
 }
 
 /** Horizontal bars, one row per item — for weeks of a month or months of a year. */
@@ -386,6 +420,9 @@ export interface LinkGroup {
 	links: { target: string; label: string; missing?: boolean }[];
 }
 
+/** Anything starting like `scheme:` — never a note name, which cannot hold a colon. */
+const URL_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+
 /**
  * Everything the period was built from, as real Obsidian links. Rendered by the
  * plugin rather than written into the note so it can never go stale: add a day
@@ -407,6 +444,14 @@ export function linkGroups(host: HTMLElement, groups: LinkGroup[]): void {
 		});
 		const list = column.createDiv({ cls: 'ds-link-list' });
 		for (const link of group.links) {
+			// A target shaped like a URL (`javascript:…`, `https:…`) is not a note —
+			// a colon cannot appear in a file name. It stays text, so the plugin never
+			// hands a note's front matter to a link as an address; today Obsidian
+			// intercepts every click on `internal-link`, but that is its guard, not ours.
+			if (URL_SCHEME.test(link.target)) {
+				list.createSpan({ cls: 'ds-link is-unresolved', text: link.label });
+				continue;
+			}
 			const anchor = list.createEl('a', {
 				cls: `internal-link ds-link${link.missing ? ' is-unresolved' : ''}`,
 				text: link.label,

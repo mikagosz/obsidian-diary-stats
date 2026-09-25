@@ -18,10 +18,9 @@ import {
 	daysInMonth,
 	eachDate,
 	inRange,
+	periodOf,
 	projectTally,
 	type Range,
-	rangeFromFrontmatter,
-	rangeProblem,
 	rankTally,
 	spanDays,
 	tallyTasks,
@@ -126,14 +125,9 @@ export default class DiaryStatsPlugin extends Plugin {
 		if (!(file instanceof TFile)) throw new Error('nie widzę tej notatki');
 
 		const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
-		const range = rangeFromFrontmatter(fm);
-		if (!range) {
-			throw new Error(
-				'ta notatka nie mówi, jaki okres opisuje — potrzebuję `od:` i `do:`, albo `miesiac:`, albo `rok:` we frontmatterze',
-			);
-		}
-		const problem = rangeProblem(range);
-		if (problem) throw new Error(problem);
+		const period = periodOf(fm);
+		if ('problem' in period) throw new Error(period.problem);
+		const { range } = period;
 
 		const wanted = parsePanels(source);
 		const days = collectDays(this.app, range, this.sources);

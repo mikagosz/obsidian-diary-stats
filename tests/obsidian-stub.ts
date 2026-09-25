@@ -34,3 +34,49 @@ export const Vault = {
 		}
 	},
 };
+
+/** The real one's contract: with `resetTimer`, every call pushes the run back. */
+export function debounce<T extends unknown[]>(
+	cb: (...args: T) => unknown,
+	timeout = 0,
+	resetTimer = false,
+) {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	let pending: T | undefined;
+	const fire = () => {
+		timer = undefined;
+		const args = pending as T;
+		pending = undefined;
+		return cb(...args);
+	};
+	const debounced = (...args: T) => {
+		pending = args;
+		if (timer !== undefined && resetTimer) clearTimeout(timer);
+		if (timer === undefined || resetTimer) timer = setTimeout(fire, timeout);
+		return debounced;
+	};
+	debounced.cancel = () => {
+		if (timer !== undefined) clearTimeout(timer);
+		timer = undefined;
+		pending = undefined;
+		return debounced;
+	};
+	debounced.run = () => {
+		if (timer === undefined) return;
+		clearTimeout(timer);
+		return fire();
+	};
+	return debounced;
+}
+
+/** Enough of a settings tab to construct one; rendering is never exercised. */
+export class PluginSettingTab {
+	constructor(
+		public app: unknown,
+		public plugin: unknown,
+	) {}
+	hide(): void {}
+}
+
+/** Imported by the settings tab for `display`, which the tests do not call. */
+export class Setting {}

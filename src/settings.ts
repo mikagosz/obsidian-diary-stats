@@ -43,6 +43,19 @@ export function projectNameList(raw: string): string[] {
 
 type SettingKey = keyof DiaryStatsSettings;
 
+/** Fields naming a folder or a heading: surrounding blanks are a typo, and empty means "not set". */
+const NAME_KEYS: readonly SettingKey[] = ['diaryFolder', 'sessionFolder', 'goalsHeading'];
+
+/**
+ * The value as it should be stored. An emptied folder field must not leave the
+ * plugin looking at nothing — `''` matches no folder, and every chart would
+ * quietly say "no data".
+ */
+export function storedValue(key: string, value: unknown): unknown {
+	if (!NAME_KEYS.includes(key as SettingKey) || typeof value !== 'string') return value;
+	return value.trim() || DEFAULT_SETTINGS[key as SettingKey];
+}
+
 /** Only the three control kinds this plugin actually uses. */
 type DiaryStatsControl =
 	| SettingTextControl<SettingKey>
@@ -137,9 +150,33 @@ export class DiaryStatsSettingTab extends PluginSettingTab {
 		return this.plugin.settings[key as SettingKey];
 	}
 
+	/**
+	 * Typing into a field fires on every keystroke, and each one used to be a
+	 * write to data.json — several hundred of them while filling in the project
+	 * list. The setting changes at once, the file once the typing stops.
+	 */
+	private readonly save = debounce(
+		() => {
+			void this.plugin.saveSettings();
+		},
+		500,
+		true,
+	);
+
+	/**
+	 * Both render paths end here: Obsidian 1.13.0+ calls it straight from the
+	 * controls it builds out of `getSettingDefinitions`, and never calls
+	 * `display` — so the guards live here, not there.
+	 */
 	async setControlValue(key: string, value: unknown): Promise<void> {
-		Object.assign(this.plugin.settings, { [key]: value });
-		await this.plugin.saveSettings();
+		Object.assign(this.plugin.settings, { [key]: storedValue(key, value) });
+		this.save();
+	}
+
+	/** Closing the settings writes whatever is still waiting. */
+	hide(): void {
+		this.save.run();
+		super.hide();
 	}
 
 	/**
@@ -154,16 +191,9 @@ export class DiaryStatsSettingTab extends PluginSettingTab {
 			if (typeof definition.desc === 'string') setting.setDesc(definition.desc);
 
 			const control = definition.control;
-			// Typing into a field fires on every keystroke, and each one used to be a
-			// write to data.json — several hundred of them while filling in the
-			// multi-line project list.
-			const commit = debounce(
-				(value: unknown) => {
-					void this.setControlValue(control.key, value);
-				},
-				500,
-				true,
-			);
+			const commit = (value: unknown) => {
+				void this.setControlValue(control.key, value);
+			};
 
 			switch (control.type) {
 				case 'text':
@@ -171,11 +201,7 @@ export class DiaryStatsSettingTab extends PluginSettingTab {
 						text
 							.setPlaceholder(control.placeholder ?? '')
 							.setValue(this.getControlValue(control.key) as string)
-							.onChange((value) => {
-								// An emptied folder field must not leave the plugin looking
-								// at the vault root.
-								commit(value.trim() || (control.defaultValue ?? ''));
-							}),
+							.onChange(commit),
 					);
 					break;
 				case 'textarea':

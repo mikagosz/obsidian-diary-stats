@@ -203,7 +203,9 @@ export function spanDays(range: Range): number {
 export function rangeProblem(range: Range): string | null {
 	const from = Date.parse(`${range.from}T00:00:00Z`);
 	const to = Date.parse(`${range.to}T00:00:00Z`);
-	if (Number.isNaN(from) || Number.isNaN(to)) {
+	// `Date.parse` rolls a day past the month's end forward — 2026-02-30 comes
+	// back as 2 March — so a date only counts when it survives the round trip.
+	if (!sameDay(from, range.from) || !sameDay(to, range.to)) {
 		return `nie rozpoznaję daty w okresie ${range.from} – ${range.to}`;
 	}
 	if (to < from) {
@@ -214,6 +216,29 @@ export function rangeProblem(range: Range): string | null {
 		return `okres ma ${days} dni, a notatka okresowa obejmuje najwyżej rok — sprawdź rok w \`od:\` i \`do:\``;
 	}
 	return null;
+}
+
+function sameDay(time: number, text: string): boolean {
+	return !Number.isNaN(time) && new Date(time).toISOString().slice(0, 10) === text;
+}
+
+/**
+ * The period a block draws, or the sentence it shows instead. The whole gate
+ * in front of the counting lives here, so dropping any part of it turns a test
+ * red — when it sat inline in `render`, deleting it passed every test.
+ */
+export function periodOf(
+	fm: Record<string, unknown> | undefined,
+): { range: Range } | { problem: string } {
+	const range = rangeFromFrontmatter(fm);
+	if (!range) {
+		return {
+			problem:
+				'ta notatka nie mówi, jaki okres opisuje — potrzebuję `od:` i `do:`, albo `miesiac:`, albo `rok:` we frontmatterze',
+		};
+	}
+	const problem = rangeProblem(range);
+	return problem ? { problem } : { range };
 }
 
 export function inRange(date: string, range: Range): boolean {
@@ -294,7 +319,35 @@ export function tallyTasks(days: Day[]): Record<TaskState, number> {
  * prose and skipped, so the user can keep notes in the same section.
  */
 const ITEM = /^(\s*)[-*+]\s+(?:\[(.)\]\s+)?(.*)$/;
-const MANUAL = /^(.*?)\s*::\s*(\d{1,3})\s*%?\s*(?:\/\s*(\d{1,3})\s*%?)?\s*$/;
+const PERCENT = /^(\d{1,3})\s*%?$/;
+
+/**
+ * `Name :: plan / actual`, taken apart with plain string operations.
+ *
+ * This used to be one regular expression with three `\s*` in a row after the
+ * number. A line ending in a run of blanks and one stray character made the
+ * engine try every way of sharing the blanks between them — cubic in their
+ * count: 2000 spaces froze Obsidian for two seconds, 8000 for two minutes.
+ * Here every blank is looked at a fixed number of times.
+ *
+ * Only the last `::` can start the numbers, since they contain no `::` of
+ * their own — the same split the expression arrived at.
+ */
+function parseManual(text: string): { name: string; plan: number; actual: number } | null {
+	const at = text.lastIndexOf('::');
+	if (at < 0) return null;
+	const parts = text.slice(at + 2).split('/');
+	if (parts.length > 2) return null;
+	const plan = (parts[0] ?? '').trim().match(PERCENT);
+	if (!plan) return null;
+	let actual = 0;
+	if (parts.length === 2) {
+		const second = (parts[1] ?? '').trim().match(PERCENT);
+		if (!second) return null;
+		actual = Number(second[1]);
+	}
+	return { name: text.slice(0, at).trim(), plan: Number(plan[1]), actual };
+}
 
 interface Item {
 	indent: number;
@@ -334,14 +387,13 @@ export function parseGoals(lines: string[]): Goal[] {
 	for (const [index, item] of items.entries()) {
 		if (item.indent !== base) continue;
 
-		const manual = item.text.match(MANUAL);
+		const manual = parseManual(item.text);
 		if (manual) {
-			const name = (manual[1] ?? '').trim();
-			if (!name) continue;
+			if (!manual.name) continue;
 			goals.push({
-				name,
-				plan: clampPercent(Number(manual[2] ?? 0)),
-				actual: clampPercent(Number(manual[3] ?? 0)),
+				name: manual.name,
+				plan: clampPercent(manual.plan),
+				actual: clampPercent(manual.actual),
 			});
 			continue;
 		}

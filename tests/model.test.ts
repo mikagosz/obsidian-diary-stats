@@ -5,6 +5,7 @@ import {
 	axisTicks,
 	eachDate,
 	parseGoals,
+	periodOf,
 	projectTally,
 	rangeFromFrontmatter,
 	rangeProblem,
@@ -176,6 +177,32 @@ describe('rangeProblem', () => {
 	it('refuses a date it cannot read', () => {
 		expect(rangeProblem({ from: '2026-13-01', to: '2026-13-31' })).toMatch(/nie rozpoznaję/);
 	});
+
+	it('refuses a day the month does not have, instead of drawing from the next month', () => {
+		expect(rangeProblem({ from: '2026-02-30', to: '2026-03-06' })).toMatch(/nie rozpoznaję/);
+		expect(rangeProblem({ from: '2026-04-01', to: '2026-04-31' })).toMatch(/nie rozpoznaję/);
+		expect(rangeProblem({ from: '2026-02-29', to: '2026-03-06' })).toMatch(/nie rozpoznaję/);
+		expect(rangeProblem({ from: '2024-02-29', to: '2024-03-06' })).toBeNull();
+	});
+});
+
+describe('periodOf', () => {
+	it('gives the range of a well-formed note', () => {
+		expect(periodOf({ miesiac: '2026-09' })).toEqual({
+			range: { from: '2026-09-01', to: '2026-09-30' },
+		});
+	});
+
+	it('says what is missing when the note names no period', () => {
+		const period = periodOf({ title: 'bez okresu' });
+		expect('problem' in period && period.problem).toMatch(/nie mówi, jaki okres/);
+		expect(periodOf(undefined)).toHaveProperty('problem');
+	});
+
+	it('stops a mistyped year before anything is counted', () => {
+		const period = periodOf({ od: '2026-08-01', do: '9026-08-07' });
+		expect('problem' in period && period.problem).toMatch(/najwyżej rok/);
+	});
 });
 
 describe('projectTally and topWithRest', () => {
@@ -314,6 +341,26 @@ describe('parseGoals', () => {
 
 	it('ignores a goal whose every sub-task was dropped', () => {
 		expect(parseGoals(['- [ ] Cel', '    - [-] jedno', '    - [-] drugie'])).toEqual([]);
+	});
+
+	it('reads the numbers after the last `::`, with or without spaces and percent signs', () => {
+		expect(parseGoals(['- Cel::80%/85%', '- a :: b :: 30'])).toEqual([
+			{ name: 'Cel', plan: 80, actual: 85 },
+			{ name: 'a :: b', plan: 30, actual: 0 },
+		]);
+		expect(parseGoals(['- Cel :: 80 /', '- Cel :: 80 / 85 / 90', '- Cel :: 8x'])).toEqual([]);
+	});
+
+	it('reads a line padded with thousands of blanks in milliseconds', () => {
+		// The old expression took about two seconds here, and eight times as long
+		// for every doubling — a pasted note could freeze Obsidian for minutes.
+		const padded = [`- C :: 8${' '.repeat(2000)}x`, `- C :: 8${'\u00a0\t'.repeat(1000)}x`];
+		const started = performance.now();
+		expect(parseGoals(padded)).toEqual([]);
+		expect(performance.now() - started).toBeLessThan(50);
+		expect(parseGoals([`- Cel :: 80${' '.repeat(2000)}`])).toEqual([
+			{ name: 'Cel', plan: 80, actual: 0 },
+		]);
 	});
 });
 
