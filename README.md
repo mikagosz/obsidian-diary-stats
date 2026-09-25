@@ -1,5 +1,7 @@
 # Diary Stats
 
+<a href="https://github.com/sponsors/mikagosz"><img src="https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA?logo=githubsponsors&logoColor=white" width="350" alt="Sponsor on GitHub Sponsors"></a>
+
 Charts for periodic notes in Obsidian. Drop one code block into a weekly, monthly
 or yearly note and it draws what the period actually looked like — from the notes
 you already write, with nothing extra to fill in.
