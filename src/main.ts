@@ -12,13 +12,14 @@ import {
 	type Slice,
 	sparkline,
 } from './charts';
-import { collectDays, collectGoals, type Sources } from './collect';
+import { auditFiles, collectAudits, collectDays, collectGoals, type Sources } from './collect';
 import {
 	type Day,
 	daysInMonth,
 	eachDate,
 	inRange,
 	periodOf,
+	plural,
 	projectTally,
 	type Range,
 	rankTally,
@@ -42,6 +43,7 @@ const PANELS = [
 	'aktywnosc',
 	'zadania',
 	'metryki',
+	'audyty',
 	'odnosniki',
 ] as const;
 type Panel = (typeof PANELS)[number];
@@ -81,9 +83,23 @@ const MONTHS_OF = [
 export default class DiaryStatsPlugin extends Plugin {
 	settings: DiaryStatsSettings = { ...DEFAULT_SETTINGS };
 
+	/**
+	 * Audit notes, found by a pass over the whole vault — kept between renders and
+	 * dropped when a file appears, disappears or changes name. The key holds the
+	 * settings the pass depended on, so editing the prefix takes effect at once.
+	 */
+	private audits: { key: string; files: TFile[] } | null = null;
+
 	async onload(): Promise<void> {
 		await this.loadSettings();
 		this.addSettingTab(new DiaryStatsSettingTab(this.app, this));
+
+		const forget = () => {
+			this.audits = null;
+		};
+		this.registerEvent(this.app.vault.on('create', forget));
+		this.registerEvent(this.app.vault.on('delete', forget));
+		this.registerEvent(this.app.vault.on('rename', forget));
 
 		this.registerMarkdownCodeBlockProcessor('diary-stats', async (source, el, ctx) => {
 			try {
@@ -113,7 +129,16 @@ export default class DiaryStatsPlugin extends Plugin {
 			sessionFolder: this.settings.sessionFolder,
 			goalsHeading: this.settings.goalsHeading,
 			projectNames: projectNameList(this.settings.projectNames),
+			auditPrefix: this.settings.auditPrefix,
 		};
+	}
+
+	private auditFiles(sources: Sources): TFile[] {
+		const key = [sources.auditPrefix, sources.diaryFolder, sources.sessionFolder].join('\n');
+		if (this.audits?.key !== key) {
+			this.audits = { key, files: auditFiles(this.app, sources) };
+		}
+		return this.audits.files;
 	}
 
 	private async render(
@@ -240,6 +265,39 @@ export default class DiaryStatsPlugin extends Plugin {
 
 		if (wanted.has('metryki')) {
 			this.metrics(panel(root, 'Kluczowe metryki', 'trend wewnątrz okresu'), days, range);
+		}
+
+		if (wanted.has('audyty')) {
+			const sources = this.sources;
+			const audits = collectAudits(this.app, this.auditFiles(sources), range, sources);
+			const tally = new Map<string, number>();
+			for (const audit of audits) {
+				const name = audit.project || 'Bez programu';
+				tally.set(name, (tally.get(name) ?? 0) + 1);
+			}
+			const ranked = rankTally(tally);
+			const box = panel(
+				root,
+				'Audyty',
+				audits.length === 0
+					? 'żadnego w tym okresie'
+					: `${audits.length} ${plural(audits.length, 'audyt', 'audyty', 'audytów')} · ${ranked.length} ${plural(ranked.length, 'program', 'programy', 'programów')}`,
+			);
+			box.addClass('ds-audits');
+			if (audits.length === 0) {
+				box.createDiv({ cls: 'ds-empty', text: 'Brak audytów w tym okresie.' });
+			} else {
+				rankedBars(box, ranked, audits.length);
+				linkGroups(box, [
+					{
+						title: 'Notatki audytów',
+						links: audits.map((audit) => ({
+							target: audit.path.replace(/\.md$/, ''),
+							label: `${dayLabel(audit.date)} · ${audit.path.split('/').pop()?.replace(/\.md$/, '') ?? audit.path}`,
+						})),
+					},
+				]);
+			}
 		}
 
 		if (wanted.has('odnosniki')) {

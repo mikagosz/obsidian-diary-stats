@@ -700,3 +700,17 @@
 	background: transparent;
 	padding: 0;
 }
+
+/* Audyty: własna rampa, żeby nie mylić się z rozkładem na projekty,
+   i kreska oddzielająca słupki od listy notatek. Kolory z palety tonów,
+   więc jasny i ciemny motyw biorą swoje stopnie same. */
+.ds-audits {
+	--ds-rank-from: var(--ds-tone-3);
+	--ds-rank-to: var(--ds-tone-1);
+}
+
+.ds-audits .ds-links {
+	margin-top: 1.1rem;
+	padding-top: 0.9rem;
+	border-top: 1px solid var(--ds-grid);
+}

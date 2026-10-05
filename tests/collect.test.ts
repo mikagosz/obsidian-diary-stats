@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { collectDays, type Sources } from '../src/collect';
+import { auditFiles, collectAudits, collectDays, type Sources } from '../src/collect';
 import { TFile, TFolder } from './obsidian-stub';
 
 function file(path: string): TFile {
@@ -43,6 +43,7 @@ const sources: Sources = {
 	sessionFolder: '_Sesje',
 	goalsHeading: 'Cele',
 	projectNames: [],
+	auditPrefix: 'Audyt',
 };
 
 const august = { from: '2026-08-01', to: '2026-08-31' };
@@ -93,5 +94,48 @@ describe('collectDays', () => {
 	// is the honest answer.
 	it('returns nothing when the diary folder does not exist', () => {
 		expect(collectDays(appWith(null), august, sources)).toEqual([]);
+	});
+});
+
+describe('audits', () => {
+	const notes = [
+		file('Projects/08-Kettle/Audyty/Audyt-Kettle-full-2026-08-24.md'),
+		file('Projects/08-Kettle/Audyty/Audyt-Kettle-2026-07-01.md'),
+		file('Projects/11-Lantern/Audyty/Audyt-kodu-2026-08-02.md'),
+		file('Projects/00-Index/Audyt — plan.md'),
+		file('_Sesje/2026/08/Audyt-w-sesjach-2026-08-24.md'),
+		file('_Dziennik/2026/Audyt-w-dzienniku-2026-08-24.md'),
+		file('Projects/08-Kettle/Kettle.md'),
+	];
+	const fm: Record<string, Record<string, unknown>> = {
+		'Projects/11-Lantern/Audyty/Audyt-kodu-2026-08-02.md': { projekt: 'lantern' },
+	};
+	const app = {
+		vault: { getMarkdownFiles: () => notes },
+		metadataCache: {
+			getFileCache: (f: TFile) => ({ frontmatter: fm[f.path] }),
+		},
+	} as never;
+
+	it('finds audit notes by name and leaves session logs and days out', () => {
+		expect(auditFiles(app, sources).map((f) => f.path)).toEqual([
+			'Projects/08-Kettle/Audyty/Audyt-Kettle-full-2026-08-24.md',
+			'Projects/08-Kettle/Audyty/Audyt-Kettle-2026-07-01.md',
+			'Projects/11-Lantern/Audyty/Audyt-kodu-2026-08-02.md',
+			'Projects/00-Index/Audyt — plan.md',
+		]);
+	});
+
+	it('counts only the period and credits each audit to its program', () => {
+		const named = { ...sources, projectNames: ['Lantern', 'Kettle'] };
+		const audits = collectAudits(app, auditFiles(app, named), august, named);
+		expect(audits.map((a) => [a.date, a.project])).toEqual([
+			['2026-08-02', 'Lantern'],
+			['2026-08-24', 'Kettle'],
+		]);
+	});
+
+	it('finds nothing when the prefix is blank', () => {
+		expect(auditFiles(app, { ...sources, auditPrefix: ' ' })).toEqual([]);
 	});
 });

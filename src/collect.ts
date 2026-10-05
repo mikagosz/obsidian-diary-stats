@@ -6,11 +6,15 @@
 
 import { type App, TFile, Vault } from 'obsidian';
 import {
+	type Audit,
 	asText,
+	auditDate,
+	auditProject,
 	type Day,
 	emptyTasks,
 	type Goal,
 	inRange,
+	isAuditRecord,
 	parseGoals,
 	type Range,
 	taskState,
@@ -28,6 +32,8 @@ export interface Sources {
 	goalsHeading: string;
 	/** Preferred spellings of project names; every variant of one folds onto it. */
 	projectNames: readonly string[];
+	/** Filename prefix marking an audit note, e.g. `Audyt`. */
+	auditPrefix: string;
 }
 
 /** Day notes are named `YYYY-MM-DD (weekday)`, so the date is the filename prefix. */
@@ -180,4 +186,53 @@ export async function collectGoals(app: App, file: TFile, sources: Sources): Pro
 	const to = next ? next.position.start.line : lines.length;
 
 	return parseGoals(lines.slice(from, to));
+}
+
+function under(path: string, folder: string): boolean {
+	return path.startsWith(`${folder}/`);
+}
+
+/**
+ * Every note whose name starts with the audit prefix — wherever it lives, since
+ * each program keeps its audits in its own folder. Session logs and day notes
+ * are left out: a session that ran an audit is named after it, but it is the
+ * record of the work, not a second audit.
+ *
+ * This one does look at every file in the vault, which is why the caller keeps
+ * the result until a file is added, removed or renamed. The test is a filename
+ * comparison only; the front matter is read later, for the matches alone.
+ */
+export function auditFiles(app: App, sources: Sources): TFile[] {
+	const prefix = sources.auditPrefix.trim().toLowerCase();
+	if (!prefix) return [];
+	return app.vault
+		.getMarkdownFiles()
+		.filter(
+			(file) =>
+				file.basename.toLowerCase().startsWith(prefix) &&
+				!under(file.path, sources.diaryFolder) &&
+				!under(file.path, sources.sessionFolder),
+		);
+}
+
+export function collectAudits(
+	app: App,
+	files: readonly TFile[],
+	range: Range,
+	sources: Sources,
+): Audit[] {
+	const casing = projectCasing(sources.projectNames);
+	const audits: Audit[] = [];
+	for (const file of files) {
+		const fm = app.metadataCache.getFileCache(file)?.frontmatter;
+		if (!isAuditRecord(fm?.tags)) continue;
+		const date = auditDate(fm?.data, file.basename);
+		if (!date || !inRange(date, range)) continue;
+		const project = canonical(
+			auditProject(file.path, sources.auditPrefix, fm?.projekt, fm?.tags),
+			casing,
+		);
+		audits.push({ date, path: file.path, project });
+	}
+	return audits.sort((a, b) => a.date.localeCompare(b.date) || a.path.localeCompare(b.path));
 }

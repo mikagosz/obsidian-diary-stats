@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { canonical, projectCasing } from '../src/collect';
 import {
 	asText,
+	auditDate,
+	auditProject,
 	axisTicks,
 	eachDate,
+	isAuditRecord,
 	parseGoals,
 	periodOf,
+	plural,
 	projectTally,
 	rangeFromFrontmatter,
 	rangeProblem,
@@ -442,5 +446,83 @@ describe('canonical', () => {
 
 	it('drops empty entries', () => {
 		expect(canonical('   ', casing)).toBe('');
+	});
+});
+
+describe('auditDate', () => {
+	it('takes the front matter date first', () => {
+		expect(auditDate('2026-10-04', 'Audyt-Foo-2026-09-24')).toBe('2026-10-04');
+		expect(auditDate(new Date('2026-10-04T00:00:00Z'), 'Audyt-Foo')).toBe('2026-10-04');
+	});
+
+	it('falls back to the date in the filename', () => {
+		expect(auditDate(undefined, 'Audyt-full-2026-07-29')).toBe('2026-07-29');
+		expect(auditDate({ a: 1 }, 'Audyt-full-2026-09-17-part-1')).toBe('2026-09-17');
+	});
+
+	// A plan or a ranking of audits is not an audit and must not inflate the count.
+	it('gives up on a note with no date anywhere', () => {
+		expect(auditDate(undefined, 'Audyt — plan')).toBeNull();
+	});
+});
+
+describe('auditProject', () => {
+	it('prefers projekt: from the front matter', () => {
+		expect(auditProject('Projects/11-Lantern/Audyty/Audyt-kodu.md', 'Audyt', 'Lantern')).toBe(
+			'Lantern',
+		);
+	});
+
+	it('names the program after its folder, skipping Audyty and the number', () => {
+		expect(auditProject('Projects/08-Kettle/Audyty/Audyt-Kettle-full.md', 'Audyt', undefined)).toBe(
+			'Kettle',
+		);
+		expect(auditProject('My plugins obsidian/Color Note/Audyt-Color-Note.md', 'Audyt', '')).toBe(
+			'Color Note',
+		);
+	});
+
+	it('returns nothing for a note at the vault root', () => {
+		expect(auditProject('Audyt-luzem-2026-01-01.md', 'Audyt', undefined)).toBe('');
+	});
+
+	// `_Admin/Audyt-Vault-…` audits the vault, not a program called `_Admin`.
+	it('lets a projekt/ tag name a note lying loose in a top-level folder', () => {
+		expect(
+			auditProject('_Admin/Audyt-Vault.md', 'Audyt', undefined, ['typ/audyt', 'projekt/vault']),
+		).toBe('vault');
+		expect(auditProject('Projects/08-Kettle/Audyty/Audyt.md', 'Audyt', '', ['projekt/inny'])).toBe(
+			'Kettle',
+		);
+	});
+});
+
+describe('isAuditRecord', () => {
+	it('keeps audits and notes with no type', () => {
+		expect(isAuditRecord(['typ/audyt', 'projekt/kettle'])).toBe(true);
+		expect(isAuditRecord(undefined)).toBe(true);
+		expect(isAuditRecord('typ/audyt obszar/www')).toBe(true);
+	});
+
+	// A plan of an audit round is typed typ/plan, not typ/audyt.
+	it('drops a note typed as something else', () => {
+		expect(isAuditRecord(['typ/plan', 'obszar/testy'])).toBe(false);
+	});
+});
+
+describe('plural', () => {
+	it('picks the Polish form', () => {
+		const pick = (n: number) => plural(n, 'audyt', 'audyty', 'audytów');
+		expect([1, 2, 4, 5, 12, 14, 22, 25, 0].map(pick)).toEqual([
+			'audyt',
+			'audyty',
+			'audyty',
+			'audytów',
+			'audytów',
+			'audytów',
+			'audyty',
+			'audytów',
+			'audytów',
+		]);
 	});
 });

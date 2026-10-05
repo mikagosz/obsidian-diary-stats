@@ -23,6 +23,8 @@ export interface DiaryStatsSettings {
 	 * at its word, which is right until two spellings of one project show up.
 	 */
 	projectNames: string;
+	/** Notes whose filename starts with this are counted as audits. */
+	auditPrefix: string;
 }
 
 export const DEFAULT_SETTINGS: DiaryStatsSettings = {
@@ -31,6 +33,7 @@ export const DEFAULT_SETTINGS: DiaryStatsSettings = {
 	goalsHeading: 'Cele',
 	maxProjects: 7,
 	projectNames: '',
+	auditPrefix: 'Audyt',
 };
 
 /** Splits the setting into names; blank lines are ignored. */
@@ -44,7 +47,12 @@ export function projectNameList(raw: string): string[] {
 type SettingKey = keyof DiaryStatsSettings;
 
 /** Fields naming a folder or a heading: surrounding blanks are a typo, and empty means "not set". */
-const NAME_KEYS: readonly SettingKey[] = ['diaryFolder', 'sessionFolder', 'goalsHeading'];
+const NAME_KEYS: readonly SettingKey[] = [
+	'diaryFolder',
+	'sessionFolder',
+	'goalsHeading',
+	'auditPrefix',
+];
 
 /**
  * The value as it should be stored. An emptied folder field must not leave the
@@ -124,6 +132,17 @@ export class DiaryStatsSettingTab extends PluginSettingTab {
 					key: 'projectNames',
 					rows: 6,
 					defaultValue: DEFAULT_SETTINGS.projectNames,
+				},
+			},
+			{
+				name: 'Audit note prefix',
+				desc: 'Notes whose filename starts with this are counted in the audits panel. The date comes from `data:` in the front matter or from the filename; the program from `projekt:` or from the folder the note sits in.',
+				aliases: ['audits', 'reviews'],
+				control: {
+					type: 'text',
+					key: 'auditPrefix',
+					placeholder: DEFAULT_SETTINGS.auditPrefix,
+					defaultValue: DEFAULT_SETTINGS.auditPrefix,
 				},
 			},
 			{

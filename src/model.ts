@@ -437,3 +437,86 @@ export function trend(values: number[]): number | null {
 	if (previous === 0) return current === 0 ? 0 : null;
 	return Math.round(((current - previous) / previous) * 100);
 }
+
+/** One audit note, credited to the day it was run and the program it looked at. */
+export interface Audit {
+	/** ISO date, YYYY-MM-DD */
+	date: string;
+	path: string;
+	project: string;
+}
+
+/**
+ * When the audit was run. `data:` in the front matter says it outright; the
+ * date in the filename — `Audyt-Foo-2026-09-24` — is the fallback, because older
+ * audits predate the field. A note with neither is not an audit record but a
+ * plan or a prompt about audits, and stays out of the count.
+ */
+export function auditDate(declared: unknown, basename: string): string | null {
+	const stated = declared instanceof Date ? declared.toISOString() : asText(declared);
+	const fromField = stated.slice(0, 10);
+	if (/^\d{4}-\d{2}-\d{2}$/.test(fromField)) return fromField;
+	return basename.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+}
+
+/** Front matter `tags:` as plain strings, whether written as a list or one string. */
+function tagList(tags: unknown): string[] {
+	const raw: unknown[] = Array.isArray(tags) ? tags : asText(tags).split(/[\s,]+/);
+	return raw.map((tag) => asText(tag).replace(/^#/, '').trim()).filter(Boolean);
+}
+
+/**
+ * A note named like an audit can still be something else — the plan of an audit
+ * round, a ranking of its fixes. Those say so in a `typ/…` tag. A note with no
+ * `typ/` tag at all is taken at its name.
+ */
+export function isAuditRecord(tags: unknown): boolean {
+	const kinds = tagList(tags).filter((tag) => tag.startsWith('typ/'));
+	return kinds.length === 0 || kinds.includes('typ/audyt');
+}
+
+/**
+ * Which program an audit looked at. `projekt:` in the front matter wins; without
+ * it the folder the note sits in names the program, since every program keeps
+ * its audits in its own folder — `08-Kettle/Audyty/…` is Kettle. A sub-folder that
+ * only groups audits (`Audyty`) is skipped, and a numbering prefix (`08-`) is
+ * dropped, so the name matches the one used everywhere else.
+ *
+ * A note lying loose in a top-level folder has no program folder above it, so
+ * there a `projekt/…` tag speaks first — otherwise an audit of the vault would
+ * be credited to `_Admin`.
+ */
+export function auditProject(
+	path: string,
+	prefix: string,
+	declared: unknown,
+	tags?: unknown,
+): string {
+	const named = asText(declared).trim();
+	if (named) return named;
+	const lead = prefix.trim().toLowerCase();
+	const folders = path.split('/').slice(0, -1);
+	while (
+		folders.length > 0 &&
+		lead &&
+		(folders[folders.length - 1] ?? '').toLowerCase().startsWith(lead)
+	) {
+		folders.pop();
+	}
+	if (folders.length <= 1) {
+		const tagged = tagList(tags).find((tag) => tag.startsWith('projekt/'));
+		if (tagged) return tagged.slice('projekt/'.length);
+	}
+	return (folders[folders.length - 1] ?? '').replace(/^\d+[-\s]+/, '').trim();
+}
+
+/**
+ * Polish counts take three forms: 1 audyt, 2–4 audyty, 5 audytów — and 22 is
+ * "audyty" again while 12 is "audytów".
+ */
+export function plural(n: number, one: string, few: string, many: string): string {
+	if (n === 1) return one;
+	const tens = n % 100;
+	const units = n % 10;
+	return units >= 2 && units <= 4 && (tens < 12 || tens > 14) ? few : many;
+}
