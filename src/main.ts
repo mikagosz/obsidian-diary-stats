@@ -287,6 +287,24 @@ export default class DiaryStatsPlugin extends Plugin {
 			if (audits.length === 0) {
 				box.createDiv({ cls: 'ds-empty', text: 'Brak audytów w tym okresie.' });
 			} else {
+				// The same donut as the projects panel, so the two read alike. The bars
+				// under it keep every program, not only the folded tail: here the full
+				// ranking is the point, and a month can touch thirty programs.
+				const slices = topWithRest(tally, this.settings.maxProjects, 'Pozostałe').map(
+					(entry, i): Slice => ({
+						label: entry.label,
+						value: entry.value,
+						tone: `${i + 1}`,
+						...(entry.members ? { detail: entry.members.join(', ') } : {}),
+					}),
+				);
+				donut(
+					box,
+					slices,
+					String(audits.length),
+					plural(audits.length, 'audyt', 'audyty', 'audytów'),
+				);
+				box.createDiv({ cls: 'ds-subhead', text: `Wszystkie programy (${ranked.length})` });
 				rankedBars(box, ranked, audits.length);
 				linkGroups(box, [
 					{
