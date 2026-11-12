@@ -15,6 +15,7 @@ import {
 	type Goal,
 	inRange,
 	isAuditRecord,
+	isRealDate,
 	parseGoals,
 	type Range,
 	taskState,
@@ -38,8 +39,9 @@ export interface Sources {
 
 /** Day notes are named `YYYY-MM-DD (weekday)`, so the date is the filename prefix. */
 function dateOf(file: TFile): string | null {
-	const match = file.basename.match(DATE_PREFIX);
-	return match?.[1] ?? null;
+	const date = file.basename.match(DATE_PREFIX)?.[1];
+	// A typo such as `2026-02-30` is not a day: counted, it gave a week eight days.
+	return date !== undefined && isRealDate(date) ? date : null;
 }
 
 /**

@@ -34,6 +34,7 @@ import {
 	type DiaryStatsSettings,
 	DiaryStatsSettingTab,
 	projectNameList,
+	settingsFrom,
 } from './settings';
 
 const PANELS = [
@@ -115,8 +116,7 @@ export default class DiaryStatsPlugin extends Plugin {
 
 	async loadSettings(): Promise<void> {
 		// `loadData()` is whatever sits in data.json — an older shape, or nothing.
-		const stored = (await this.loadData()) as Partial<DiaryStatsSettings> | null;
-		this.settings = { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
+		this.settings = settingsFrom(await this.loadData());
 	}
 
 	async saveSettings(): Promise<void> {

@@ -64,6 +64,26 @@ export function storedValue(key: string, value: unknown): unknown {
 	return value.trim() || DEFAULT_SETTINGS[key as SettingKey];
 }
 
+/**
+ * Settings from whatever sits in data.json. Each field must be of the same kind
+ * as its default, or the default is used: a folder stored as a number made every
+ * chart say "no data", and `projectNames: 5` broke every block with
+ * "t.split is not a function". Names get the same cleanup the settings tab does.
+ */
+export function settingsFrom(stored: unknown): DiaryStatsSettings {
+	const settings: DiaryStatsSettings = { ...DEFAULT_SETTINGS };
+	if (typeof stored !== 'object' || stored === null || Array.isArray(stored)) return settings;
+	const record = stored as Record<string, unknown>;
+	for (const key of Object.keys(DEFAULT_SETTINGS) as SettingKey[]) {
+		const value = record[key];
+		const fallback = DEFAULT_SETTINGS[key];
+		if (typeof value !== typeof fallback) continue;
+		if (typeof value === 'number' && !Number.isFinite(value)) continue;
+		(settings as Record<SettingKey, unknown>)[key] = storedValue(key, value);
+	}
+	return settings;
+}
+
 /** Only the three control kinds this plugin actually uses. */
 type DiaryStatsControl =
 	| SettingTextControl<SettingKey>

@@ -218,6 +218,14 @@ export function rangeProblem(range: Range): string | null {
 	return null;
 }
 
+/**
+ * A `YYYY-MM-DD` that names a day which exists. `Date.parse` rolls 2026-02-30
+ * forward into March, so the text has to survive the round trip.
+ */
+export function isRealDate(text: string): boolean {
+	return sameDay(Date.parse(`${text}T00:00:00Z`), text);
+}
+
 function sameDay(time: number, text: string): boolean {
 	return !Number.isNaN(time) && new Date(time).toISOString().slice(0, 10) === text;
 }
@@ -381,7 +389,10 @@ export function parseGoals(lines: string[]): Goal[] {
 	}
 	if (items.length === 0) return [];
 
-	const base = Math.min(...items.map((i) => i.indent));
+	// A loop, not `Math.min(...)`: spreading a few hundred thousand list items
+	// overflowed the call stack and the whole block showed a bare RangeError.
+	let base = Number.POSITIVE_INFINITY;
+	for (const item of items) if (item.indent < base) base = item.indent;
 	const goals: Goal[] = [];
 
 	for (const [index, item] of items.entries()) {
